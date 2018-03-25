@@ -111,17 +111,18 @@ public class ClientMain
         try {
             client.sendCommand(commandToSend);                              //send a registration request
             int reply=client.getReply();                                    //get a reply back from the server
+            System.out.println(client.getReplyString());
             if(reply!=REGISTRATION_SUCCESS){                                //if NOT successful
                 return false;
             }
             else
                 return true;
 
+
         } catch (IOException e) {
             e.printStackTrace();
             return false;
         }
-
     }
 
     /**
