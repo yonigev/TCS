@@ -24,6 +24,8 @@ public class ClientMain
     private static final String PASSWORD_PROMPT="Enter your Password ";
     private static final String CONNECTION_ERROR="Error! cannot connect to server ";
 
+    private static final int    REGISTRATION_SUCCESS=601;
+
     public static File make_test_file(){
         File file=new File("test.txt");
         try {
@@ -53,14 +55,7 @@ public class ClientMain
     }
     public static void main( String[] args ){
 
-
-            FTPClient client=connectToServer("127.0.0.1");//
-
-
-
-
-//kj
-
+            FTPClient client=connectToServer("127.0.0.1");
     }
 
     /**
@@ -68,38 +63,41 @@ public class ClientMain
      * @return the FTPClient
      */
     private static FTPClient connectToServer(String serverAddress) {
-        FTPClient client=new FTPClient();//
-        try {
-            System.out.println("CONNECTING....");
-            client.connect(serverAddress,44444);
-            System.out.println("CONNECTED!");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        if(client.isConnected()) {
-            System.out.println(LOGIN_PROMPT);
-            Scanner scanner = new Scanner(System.in);
-            char input = scanner.next(".").charAt(0);
-            if ( input == 'y') {
-                while(!loginExistingAccount(client, scanner));//try logging in until successful
-            } else if (input =='n'){
-                registerNewAccount(client);         //register a new account
-                while(!loginExistingAccount(client, scanner));//try logging in until successful
-            }//
-            return client;
-        }
-        else{
-            System.out.println(CONNECTION_ERROR);
-            return null;
-        }
+        FTPClient client = new FTPClient();//
+        while (true) {
+            try {
+                System.out.println("CONNECTING....");
+                client.connect(serverAddress, 44444);
+                System.out.println("CONNECTED!");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (client.isConnected()) {
+                System.out.println(LOGIN_PROMPT);
+                Scanner scanner = new Scanner(System.in);
+                char input = scanner.next(".").charAt(0);
+                if (input == 'y') {
+                    while (!loginExistingAccount(client, scanner)) ;//try logging in until successful
+                }
+                else if (input == 'n') {
+                    if(!registerNewAccount(client))         //register a new account
+                        continue;
+                    while (!loginExistingAccount(client, scanner)) ;//try logging in until successful
+                }
+                return client;
+            } else {
+                System.out.println(CONNECTION_ERROR);
+                return null;
+            }
 
+        }
     }
 
     /**
      * Send the server a REGISTER USER command
      * @param client
      */
-    private static void registerNewAccount(FTPClient client) {
+    private static boolean registerNewAccount(FTPClient client) {
         //System.out.println(REGISTER_PROMPT);            //print a message to the user
         Scanner sc=new Scanner(System.in);
         String username;
@@ -111,11 +109,17 @@ public class ClientMain
 
         String commandToSend=REGISTER_COMMAND+" "+username+" "+password;    //the command we will send to the server
         try {
-            client.sendCommand(commandToSend);
+            client.sendCommand(commandToSend);                              //send a registration request
+            int reply=client.getReply();                                    //get a reply back from the server
+            if(reply!=REGISTRATION_SUCCESS){                                //if NOT successful
+                return false;
+            }
+            else
+                return true;
 
-            System.out.println(client.getReplyString());
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
 
     }
