@@ -93,20 +93,23 @@ public class ClientMain {
 
     }
 
-    private static void handleConnection(FTPClient client){
+    private static void handleConnection(FTPClient client) {
         String input;
         String[] command;
-        while(client.isConnected()){
+        while (client.isConnected()) {
             Scanner sc = new Scanner(System.in);
-            input=sc.nextLine();
-            command=input.split(" ");
-            if(command.length>0){
-                switch (command[0]){
+            input = sc.nextLine();
+            command = input.split(" ");
+            if (command.length > 0) {
+                switch (command[0]) {
                     case "ls":
                         handleListCommand(client);
                         break;
                     case "write":
-                        handleWrite(client,command);
+                        handleWrite(client, command);
+                        break;
+                    case "read":
+                        handleRead(client,command);
                         break;
                     case "exit":
                         try {
@@ -119,33 +122,40 @@ public class ClientMain {
                         break;
 
 
-
-
                 }
 
 
-
-
-            }
-            else {
+            } else {
                 //TODO: COMMAND INPUT ERROR
             }
-
-
-
-
-
 
 
         }
     }
 
-    private static void handleWrite(FTPClient client, String[] command) {
-        for(int i=1; i<command.length; i++){
-            String path=command[i];
-            File file=new File(path);
+    private static void handleRead(FTPClient client, String[] command) {
+        for (int i = 1; i < command.length; i++) {
+            String name = command[i];
+            File file = new File(name);
+
             try {
-                client.storeFile(getNameFromPath(path),new FileInputStream(file));
+                if (!file.exists())
+                    file.createNewFile();
+                client.retrieveFile(name, new FileOutputStream(file));
+                System.out.println(client.getReplyString());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    private static void handleWrite(FTPClient client, String[] command) {
+        for (int i = 1; i < command.length; i++) {
+            String path = command[i];
+            File file = new File(path);
+            try {
+                client.storeFile(getNameFromPath(path), new FileInputStream(file));
                 System.out.println(client.getReplyString());
             } catch (IOException e) {
                 e.printStackTrace();
@@ -156,27 +166,28 @@ public class ClientMain {
 
     /**
      * Get file name from the Path
+     *
      * @param path
      * @return
      */
     private static String getNameFromPath(String path) {
-        if(path.contains("\\")) {
+        if (path.contains("\\")) {
             String[] path_names = path.split("\\\\");
             return path_names[path_names.length - 1];
-        }
-        else
+        } else
             return path;
     }
 
     /**
      * Handles an "ls" command
+     *
      * @param client
      */
     private static void handleListCommand(FTPClient client) {
         try {
-            String[] names=client.listNames();
-            if(names!=null && names.length>0){
-                for(String fileName: names){
+            String[] names = client.listNames();
+            if (names != null && names.length > 0) {
+                for (String fileName : names) {
                     System.out.println(fileName);
                 }
             }
