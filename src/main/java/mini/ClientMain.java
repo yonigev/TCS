@@ -1,6 +1,7 @@
 package mini;
 
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPCmd;
 import org.apache.commons.net.ftp.FTPCommand;
 import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import sun.net.ftp.FtpClient;
@@ -54,6 +55,7 @@ public class ClientMain {
     public static void main(String[] args) {
 
         FTPClient client = connectToServer("127.0.0.1");
+        handleConnection(client);
     }
 
     /**
@@ -89,6 +91,98 @@ public class ClientMain {
             return null;
         }
 
+    }
+
+    private static void handleConnection(FTPClient client){
+        String input;
+        String[] command;
+        while(client.isConnected()){
+            Scanner sc = new Scanner(System.in);
+            input=sc.nextLine();
+            command=input.split(" ");
+            if(command.length>0){
+                switch (command[0]){
+                    case "ls":
+                        handleListCommand(client);
+                        break;
+                    case "write":
+                        handleWrite(client,command);
+                        break;
+                    case "exit":
+                        try {
+                            client.logout();
+                            client.disconnect();
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+
+
+
+
+                }
+
+
+
+
+            }
+            else {
+                //TODO: COMMAND INPUT ERROR
+            }
+
+
+
+
+
+
+
+        }
+    }
+
+    private static void handleWrite(FTPClient client, String[] command) {
+        for(int i=1; i<command.length; i++){
+            String path=command[i];
+            File file=new File(path);
+            try {
+                client.storeFile(getNameFromPath(path),new FileInputStream(file));
+                System.out.println(client.getReplyString());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+    /**
+     * Get file name from the Path
+     * @param path
+     * @return
+     */
+    private static String getNameFromPath(String path) {
+        if(path.contains("\\")) {
+            String[] path_names = path.split("\\\\");
+            return path_names[path_names.length - 1];
+        }
+        else
+            return path;
+    }
+
+    /**
+     * Handles an "ls" command
+     * @param client
+     */
+    private static void handleListCommand(FTPClient client) {
+        try {
+            String[] names=client.listNames();
+            if(names!=null && names.length>0){
+                for(String fileName: names){
+                    System.out.println(fileName);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
