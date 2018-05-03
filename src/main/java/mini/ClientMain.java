@@ -7,16 +7,22 @@ import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import sun.net.ftp.FtpClient;
 import org.apache.commons.lang3.ArrayUtils;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 
 import java.io.*;
 import java.net.Socket;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
-/**
- * Hello world!
- */
 public class ClientMain {
     private static final String DEFAULT_LOGIN = "anonymous";
     static String REGISTER_COMMAND = "USER !REGISTER!";
@@ -30,9 +36,17 @@ public class ClientMain {
     private static final String FILE_DELETION_FAILURE="File Could not be Deleted : ";
     private static final String FILE_OVERWRITE_PROMPT="File already exists. overwrite? y/n";
     private static final String FILE_RENAME_ILLEGAL="Illegal Number of Arguments ";
-
     private static final int REGISTRATION_SUCCESS = 601;
+
+    private static final String PASSWORD_SUFFIX_LOGIN="1";          //suffix added to the password for hashing - after hash- would be the user's password
+    private static final String PASSWORD_SUFFIX_ENCRYPTION="2";     //suffix added to the password for hashing - after hash-would be used for file & file name encryption
+
+
     private static final Logger logger=Logger.getLogger("client_logger");
+    private static MessageDigest digest;
+    private static SecretKeyFactory secretKeyFactory;
+    private static byte[] encryptionKey;
+
     public static File make_test_file() {
         File file = new File("test.txt");
         try {
@@ -61,8 +75,14 @@ public class ClientMain {
     }
 
     public static void main(String[] args) {
-
+        try {
+            secretKeyFactory = SecretKeyFactory.getInstance("SHA256"); //TODO: READ ABOUT THIS.
+            logger.info("secretKeyFactory: "+secretKeyFactory);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
         FTPClient client = connectToServer("127.0.0.1");
+
         handleConnection(client);
     }
 
@@ -72,7 +92,7 @@ public class ClientMain {
      * @return the FTPClient
      */
     private static FTPClient connectToServer(String serverAddress) {
-        FTPClient client = new FTPClient();//
+        FTPClient client = new FTPClient();
         try {
             System.out.println("CONNECTING....");
             client.connect(serverAddress, 44444);
@@ -81,6 +101,7 @@ public class ClientMain {
             e.printStackTrace();
         }
         if (client.isConnected()) {
+
             while (true) {
                 System.out.println(LOGIN_PROMPT);
                 Scanner scanner = new Scanner(System.in);
@@ -109,6 +130,8 @@ public class ClientMain {
 
         String input;
         String[] command;
+
+
         while (client.isConnected()) {
             Scanner sc = new Scanner(System.in);
             input = sc.nextLine();
@@ -280,6 +303,7 @@ public class ClientMain {
         }
     }
 
+
     /**
      * Send the server a REGISTER USER command
      *
@@ -295,7 +319,9 @@ public class ClientMain {
         System.out.println(PASSWORD_PROMPT + "to register");
         password = sc.next();
 
-        String commandToSend = REGISTER_COMMAND + " " + username + " " + password;    //the command we will send to the server
+        String commandToSend = REGISTER_COMMAND + " " + username + " " + encryptPassword(password,PASSWORD_SUFFIX_LOGIN);    //the command we will send to the server
+        logger.info("Registering- "+commandToSend);
+        logger.info("STAM BISHVIL LIROT:"+encryptPassword(password,PASSWORD_SUFFIX_LOGIN).toString());
         try {
             client.sendCommand(commandToSend);                              //send a registration request
             int reply = client.getReply();                                    //get a reply back from the server
@@ -309,6 +335,18 @@ public class ClientMain {
         } catch (IOException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    private static byte[] encryptPassword(String password,String con) {
+        SecretKey key;
+        KeySpec ks=new PBEKeySpec(password.toCharArray(),con.getBytes(),10,256);
+        try {
+            key=secretKeyFactory.generateSecret(ks);
+            return key.getEncoded();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -331,8 +369,11 @@ public class ClientMain {
             System.out.println(ILLEGAL_INPUT);
         }
         try {
-
-            boolean success = client.login(username, password);
+            boolean success = client.login(username, encryptPassword(password,PASSWORD_SUFFIX_LOGIN).toString());
+            logger.info("LOGIN with password "+encryptPassword(password,PASSWORD_SUFFIX_LOGIN).toString());
+            if(success){
+                    encryptionKey=encryptPassword(password,PASSWORD_SUFFIX_ENCRYPTION);
+            }
             System.out.println(client.getReplyString());
             return success;
         } catch (IOException e) {
