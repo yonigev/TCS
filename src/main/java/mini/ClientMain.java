@@ -5,10 +5,14 @@ import org.apache.commons.net.ftp.FTPCmd;
 import org.apache.commons.net.ftp.FTPCommand;
 import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import sun.net.ftp.FtpClient;
+import org.apache.commons.lang3.ArrayUtils;
+
 
 import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Hello world!
@@ -22,9 +26,13 @@ public class ClientMain {
     private static final String USERNAME_PROMPT = "Enter your Username ";
     private static final String PASSWORD_PROMPT = "Enter your Password ";
     private static final String CONNECTION_ERROR = "Error! cannot connect to server ";
+    private static final String FILE_DELETION_SUCCESS="File Successfully Deleted : ";
+    private static final String FILE_DELETION_FAILURE="File Could not be Deleted : ";
+    private static final String FILE_OVERWRITE_PROMPT="File already exists. overwrite? y/n";
+    private static final String FILE_RENAME_ILLEGAL="Illegal Number of Arguments ";
 
     private static final int REGISTRATION_SUCCESS = 601;
-
+    private static final Logger logger=Logger.getLogger("client_logger");
     public static File make_test_file() {
         File file = new File("test.txt");
         try {
@@ -93,7 +101,12 @@ public class ClientMain {
 
     }
 
+    /**
+     * Handles the connection to the server
+     * @param client
+     */
     private static void handleConnection(FTPClient client) {
+
         String input;
         String[] command;
         while (client.isConnected()) {
@@ -109,8 +122,10 @@ public class ClientMain {
                         handleWrite(client, command);
                         break;
                     case "read":
-                        handleRead(client,command);
+                        handleRead(client, command);
                         break;
+                    case "delete":
+                        handleDelete(client,command);
                     case "exit":
                         try {
                             client.logout();
@@ -120,6 +135,11 @@ public class ClientMain {
                             e.printStackTrace();
                         }
                         break;
+                    case "rename":
+                        handleRename(client, command);
+                        break;
+                    default:
+                        System.out.println("Unknown command");
 
 
                 }
@@ -131,6 +151,49 @@ public class ClientMain {
 
 
         }
+    }
+
+    /**
+     * Handles the "rename" command
+     * @param client
+     * @param command
+     */
+    private static void handleRename(FTPClient client, String[] command) {
+        if(command.length == 3){
+            try {
+                client.rename(command[1],command[2]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+        }
+        else
+            System.out.println(FILE_RENAME_ILLEGAL);
+    }
+
+    private static void handleDelete(FTPClient client, String[] command) {
+
+        for (String name: command){
+            if(name.equals(command[0])) //skip command name
+                continue;
+            try {
+                if(client.deleteFile(name)){
+                    System.out.print(FILE_DELETION_SUCCESS);
+                    System.out.println(name);
+                }
+                else{
+                    System.out.print(FILE_DELETION_FAILURE);
+                    System.out.println(name);
+                }
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+
     }
 
     private static void handleRead(FTPClient client, String[] command) {
@@ -151,17 +214,38 @@ public class ClientMain {
 
 
     private static void handleWrite(FTPClient client, String[] command) {
-        for (int i = 1; i < command.length; i++) {
-            String path = command[i];
+        for (String filePath: command) {
+            if(ArrayUtils.indexOf(command,filePath) == 0)
+                continue;
+            String path = filePath;
             File file = new File(path);
             try {
-                client.storeFile(getNameFromPath(path), new FileInputStream(file));
-                System.out.println(client.getReplyString());
+                //if file exists
+                if(ArrayUtils.contains(client.listNames(),getNameFromPath(filePath))){
+                    //ask user to overwrite
+                    if(promptOverWrite(getNameFromPath(filePath))){
+                        client.storeFile(getNameFromPath(path), new FileInputStream(file));
+                        System.out.println(client.getReplyString());
+                    }
+                }
+                else {
+                    client.storeFile(getNameFromPath(path), new FileInputStream(file));
+                    System.out.println(client.getReplyString());
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
         }
+    }
+
+    private static boolean promptOverWrite(String name) {
+        System.out.print(name+" : ");
+        System.out.println(FILE_OVERWRITE_PROMPT);
+        Scanner sc = new Scanner(System.in);
+        char input = sc.next(".").charAt(0);
+        return (input == 'y');
+
     }
 
     /**
