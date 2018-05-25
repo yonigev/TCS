@@ -3,10 +3,14 @@ package mini;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.net.ftp.FTPClient;
 
+import javax.crypto.Cipher;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.Key;
 import java.util.Scanner;
 
 public class ClientHandler {
@@ -14,9 +18,14 @@ public class ClientHandler {
     private static final String FILE_DELETION_FAILURE="File Could not be Deleted : ";
     private static final String FILE_OVERWRITE_PROMPT="File already exists. overwrite? y/n";
     private static final String FILE_RENAME_ILLEGAL="Illegal Number of Arguments ";
+    private String key1ForEncryption;
+    private String key2ForAuthen;
+    private String key3ForPassword;
 
-    ClientHandler(){
-
+    ClientHandler(String key1ForEncryption, String key2ForAuthen, String key3ForPassword){
+            this.key1ForEncryption=key1ForEncryption;
+            this.key2ForAuthen=key2ForAuthen;
+            this.key3ForPassword= key3ForPassword;
     }
 
     /**
@@ -200,5 +209,69 @@ public class ClientHandler {
         }
     }
 
+    /**
+     * encrypt data with encryptionKey using cipher with AES algorithm.
+     * returning the encrypted data as string or null if fails.
+     *
+     * @param data
+     * @param encryptionKey
+     * @return
+     */
+    private static String encryptData(String data, String encryptionKey) {
+        try {
+            Key aesKey = new SecretKeySpec(encryptionKey.getBytes(), "AES");
+            Cipher cipher = Cipher.getInstance("AES");
+            cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+            byte[] encrypted = cipher.doFinal(data.getBytes());
+            return new String(encrypted);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
+    /**
+     * Decrypt encrypted data with encryptionKey using AES and Cipher.
+     * returning original data.
+     *
+     * @param encryptedData
+     * @param encryptionKey
+     * @return
+     */
+    private static String decryptData(String encryptedData, String encryptionKey) {
+        try {
+            Key aesKey = new SecretKeySpec(encryptionKey.getBytes(), "AES");
+            Cipher cipher = Cipher.getInstance("AES");
+            cipher.init(Cipher.DECRYPT_MODE, aesKey);
+            return new String(cipher.doFinal(encryptedData.getBytes()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * creating tag using Mac with authenKey on data.
+     * returning the tag as string or null if fails.
+     *
+     * @param data
+     * @param authenKey
+     * @return
+     */
+    private static String getAuthenticationTag(String data, String authenKey) {
+        try {
+            SecretKeySpec macKey = new SecretKeySpec(authenKey.getBytes(), "HmacSHA256");
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(macKey);
+            byte[] tag = mac.doFinal(data.getBytes());
+            return new String(tag);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+//    private static String authenticateData(String data, String authenKey) {
+//
+//    }
 }

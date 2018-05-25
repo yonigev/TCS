@@ -32,9 +32,6 @@ public class ClientMain {
     private static String key3ForPassword;
 
     private static final Logger logger = Logger.getLogger("client_logger");
-    private static MessageDigest digest;
-    private static SecretKeyFactory secretKeyFactory;
-    private static byte[] encryptionKey;
 
     public static File make_test_file() {
         File file = new File("test.txt");
@@ -75,7 +72,7 @@ public class ClientMain {
 
         FTPClient client = connectToServer("127.0.0.1");
         if (client != null) {
-            ClientHendler handler = new ClientHendler();
+            ClientHandler handler = new ClientHandler(key1ForEncryption,key2ForAuthen,key3ForPassword);
             handler.handleConnection(client);
         }
         else
@@ -191,32 +188,6 @@ public class ClientMain {
         }
     }
 
-
-    /**
-     * creating tag using Mac with authenKey on data.
-     * returning the tag as string or null if fails.
-     *
-     * @param data
-     * @param authenKey
-     * @return
-     */
-    private static String getAuthenticationTag(String data, String authenKey) {
-        try {
-            SecretKeySpec macKey = new SecretKeySpec(authenKey.getBytes(), "HmacSHA256");
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(macKey);
-            byte[] tag = mac.doFinal(data.getBytes());
-            return new String(tag);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-//    private static String authenticateData(String data, String authenKey) {
-//
-//    }
-
     /**
      * Setting up all 3 keys
      *
@@ -228,44 +199,4 @@ public class ClientMain {
         key3ForPassword = DigestUtils.sha256Hex(password + PASSWORD_SUFFIX_PASSWORD);
     }
 
-    /**
-     * encrypt data with encryptionKey using cipher with AES algorithm.
-     * returning the encrypted data as string or null if fails.
-     *
-     * @param data
-     * @param encryptionKey
-     * @return
-     */
-    private static String encryptData(String data, String encryptionKey) {
-        try {
-            Key aesKey = new SecretKeySpec(encryptionKey.getBytes(), "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.ENCRYPT_MODE, aesKey);
-            byte[] encrypted = cipher.doFinal(data.getBytes());
-            return new String(encrypted);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    /**
-     * Decrypt encrypted data with encryptionKey using AES and Cipher.
-     * returning original data.
-     *
-     * @param encryptedData
-     * @param encryptionKey
-     * @return
-     */
-    private static String decryptData(String encryptedData, String encryptionKey) {
-        try {
-            Key aesKey = new SecretKeySpec(encryptionKey.getBytes(), "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.DECRYPT_MODE, aesKey);
-            return new String(cipher.doFinal(encryptedData.getBytes()));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 }
