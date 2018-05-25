@@ -2,7 +2,6 @@ package mini;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.net.ftp.FTPClient;
-
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -12,6 +11,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.Key;
 import java.util.Scanner;
+import org.apache.commons.io.IOUtils;
 
 public class ClientHandler {
     private static final String FILE_DELETION_SUCCESS="File Successfully Deleted : ";
@@ -148,6 +148,18 @@ public class ClientHandler {
                 continue;
             String path = filePath;
             File file = new File(path);
+            try {
+                byte[] toSend = IOUtils.toByteArray( new FileInputStream(file));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+
+
+
+
+
             try {
                 //if file exists
                 if(ArrayUtils.contains(client.listNames(),getNameFromPath(filePath))){
