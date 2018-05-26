@@ -1,35 +1,37 @@
 package mini;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.net.ftp.FTPClient;
+
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.security.Key;
+import java.util.Arrays;
 import java.util.Scanner;
+import java.util.logging.Logger;
+
 import org.apache.commons.io.IOUtils;
 
 public class ClientHandler {
-    private static final String FILE_DELETION_SUCCESS="File Successfully Deleted : ";
-    private static final String FILE_DELETION_FAILURE="File Could not be Deleted : ";
-    private static final String FILE_OVERWRITE_PROMPT="File already exists. overwrite? y/n";
-    private static final String FILE_RENAME_ILLEGAL="Illegal Number of Arguments ";
-    private String key1ForEncryption;
-    private String key2ForAuthen;
-    private String key3ForPassword;
+    private static final String FILE_DELETION_SUCCESS = "File Successfully Deleted : ";
+    private static final String FILE_DELETION_FAILURE = "File Could not be Deleted : ";
+    private static final String FILE_OVERWRITE_PROMPT = "File already exists. overwrite? y/n";
+    private static final String FILE_RENAME_ILLEGAL = "Illegal Number of Arguments ";
+    private static final Logger logger = Logger.getLogger("clientHandler_logger");
+    private byte[] key1ForEncryption;
+    private byte[] key2ForAuthen;
 
-    ClientHandler(String key1ForEncryption, String key2ForAuthen, String key3ForPassword){
-            this.key1ForEncryption=key1ForEncryption;
-            this.key2ForAuthen=key2ForAuthen;
-            this.key3ForPassword= key3ForPassword;
+    ClientHandler(byte[] key1ForEncryption, byte[] key2ForAuthen) {
+        this.key1ForEncryption = key1ForEncryption;
+        this.key2ForAuthen = key2ForAuthen;
     }
 
     /**
      * Handles the connection to the server
+     *
      * @param client
      */
     public void handleConnection(FTPClient client) {
@@ -54,7 +56,7 @@ public class ClientHandler {
                         handleRead(client, command);
                         break;
                     case "delete":
-                        handleDelete(client,command);
+                        handleDelete(client, command);
                     case "exit":
                         try {
                             client.logout();
@@ -84,39 +86,37 @@ public class ClientHandler {
 
     /**
      * Handles the "rename" command
+     *
      * @param client
      * @param command
      */
-    private static void handleRename(FTPClient client, String[] command) {
-        if(command.length == 3){
+    private void handleRename(FTPClient client, String[] command) {
+        if (command.length == 3) {
             try {
-                client.rename(command[1],command[2]);
+                client.rename(command[1], command[2]);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
 
-        }
-        else
+        } else
             System.out.println(FILE_RENAME_ILLEGAL);
     }
 
-    private static void handleDelete(FTPClient client, String[] command) {
+    private void handleDelete(FTPClient client, String[] command) {
 
-        for (String name: command){
-            if(name.equals(command[0])) //skip command name
+        for (String name : command) {
+            if (name.equals(command[0])) //skip command name
                 continue;
             try {
-                if(client.deleteFile(name)){
+                if (client.deleteFile(name)) {
                     System.out.print(FILE_DELETION_SUCCESS);
                     System.out.println(name);
-                }
-                else{
+                } else {
                     System.out.print(FILE_DELETION_FAILURE);
                     System.out.println(name);
                 }
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
 
@@ -125,7 +125,7 @@ public class ClientHandler {
 
     }
 
-    private static void handleRead(FTPClient client, String[] command) {
+    private void handleRead(FTPClient client, String[] command) {
         for (int i = 1; i < command.length; i++) {
             String name = command[i];
             File file = new File(name);
@@ -133,7 +133,16 @@ public class ClientHandler {
             try {
                 if (!file.exists())
                     file.createNewFile();
-                client.retrieveFile(name, new FileOutputStream(file));
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                client.retrieveFile(name,out);
+                byte[] bytesRead = out.toByteArray();
+                byte[] encryptedFile = authenticateData(bytesRead , key2ForAuthen);
+                if(encryptedFile==null) {
+                    System.out.println("file damaged");
+                    return;
+                }
+                byte[] originFile = decryptData(encryptedFile,key1ForEncryption);
+                FileUtils.writeByteArrayToFile(file, originFile); // writing byte array to file
                 System.out.println(client.getReplyString());
             } catch (IOException e) {
                 e.printStackTrace();
@@ -142,37 +151,36 @@ public class ClientHandler {
     }
 
 
-    private static void handleWrite(FTPClient client, String[] command) {
-        for (String filePath: command) {
-            if(ArrayUtils.indexOf(command,filePath) == 0)
+    private void handleWrite(FTPClient client, String[] command) {
+        for (String filePath : command) {
+            if (ArrayUtils.indexOf(command, filePath) == 0)
                 continue;
             String path = filePath;
             File file = new File(path);
             try {
-                byte[] toSend = IOUtils.toByteArray( new FileInputStream(file));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                FileInputStream fis= new FileInputStream(file);
+                byte[] originBytesToWrite = IOUtils.toByteArray(fis);
+                byte[] encryptedBytesToWrite = encryptData(originBytesToWrite, key1ForEncryption);
+                byte[] tag = getAuthenticationTag(encryptedBytesToWrite, key2ForAuthen);
+                //merging 2 bytes array encryptedBytesToWrite + tag
+                byte[] bytesToWrite = new byte[encryptedBytesToWrite.length + tag.length];
+                System.arraycopy(encryptedBytesToWrite, 0, bytesToWrite, 0, encryptedBytesToWrite.length);
+                System.arraycopy(tag, 0, bytesToWrite, encryptedBytesToWrite.length, tag.length);
 
-
-
-
-
-
-
-            try {
+                InputStream inputToWrite = new ByteArrayInputStream(bytesToWrite);
                 //if file exists
-                if(ArrayUtils.contains(client.listNames(),getNameFromPath(filePath))){
+                if (ArrayUtils.contains(client.listNames(), getNameFromPath(filePath))) {
                     //ask user to overwrite
-                    if(promptOverWrite(getNameFromPath(filePath))){
-                        client.storeFile(getNameFromPath(path), new FileInputStream(file));
+                    if (promptOverWrite(getNameFromPath(filePath))) {
+                        client.storeFile(getNameFromPath(path),inputToWrite);
                         System.out.println(client.getReplyString());
                     }
-                }
-                else {
-                    client.storeFile(getNameFromPath(path), new FileInputStream(file));
+                } else {
+                    client.storeFile(getNameFromPath(path), inputToWrite);
                     System.out.println(client.getReplyString());
                 }
+                inputToWrite.close();
+                fis.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -180,8 +188,8 @@ public class ClientHandler {
         }
     }
 
-    private static boolean promptOverWrite(String name) {
-        System.out.print(name+" : ");
+    private boolean promptOverWrite(String name) {
+        System.out.print(name + " : ");
         System.out.println(FILE_OVERWRITE_PROMPT);
         Scanner sc = new Scanner(System.in);
         char input = sc.next(".").charAt(0);
@@ -195,7 +203,7 @@ public class ClientHandler {
      * @param path
      * @return
      */
-    private static String getNameFromPath(String path) {
+    private String getNameFromPath(String path) {
         if (path.contains("\\")) {
             String[] path_names = path.split("\\\\");
             return path_names[path_names.length - 1];
@@ -208,7 +216,7 @@ public class ClientHandler {
      *
      * @param client
      */
-    private static void handleListCommand(FTPClient client) {
+    private void handleListCommand(FTPClient client) {
         try {
             String[] names = client.listNames();
             if (names != null && names.length > 0) {
@@ -229,13 +237,12 @@ public class ClientHandler {
      * @param encryptionKey
      * @return
      */
-    private static String encryptData(String data, String encryptionKey) {
+    private byte[] encryptData(byte[] data, byte[] encryptionKey) {
         try {
-            Key aesKey = new SecretKeySpec(encryptionKey.getBytes(), "AES");
+            Key aesKey = new SecretKeySpec(encryptionKey, "AES");
             Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.ENCRYPT_MODE, aesKey);
-            byte[] encrypted = cipher.doFinal(data.getBytes());
-            return new String(encrypted);
+            return cipher.doFinal(data);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -250,12 +257,12 @@ public class ClientHandler {
      * @param encryptionKey
      * @return
      */
-    private static String decryptData(String encryptedData, String encryptionKey) {
+    private byte[] decryptData(byte[] encryptedData, byte[] encryptionKey) {
         try {
-            Key aesKey = new SecretKeySpec(encryptionKey.getBytes(), "AES");
+            Key aesKey = new SecretKeySpec(encryptionKey, "AES");
             Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.DECRYPT_MODE, aesKey);
-            return new String(cipher.doFinal(encryptedData.getBytes()));
+            return cipher.doFinal(encryptedData);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -263,27 +270,47 @@ public class ClientHandler {
     }
 
     /**
-     * creating tag using Mac with authenKey on data.
+     * creating tag of length 256bit using Mac with authenKey on data.
      * returning the tag as string or null if fails.
      *
      * @param data
      * @param authenKey
      * @return
      */
-    private static String getAuthenticationTag(String data, String authenKey) {
+    private byte[] getAuthenticationTag(byte[] data, byte[] authenKey) {
         try {
-            SecretKeySpec macKey = new SecretKeySpec(authenKey.getBytes(), "HmacSHA256");
+            SecretKeySpec macKey = new SecretKeySpec(authenKey, "HmacSHA256");
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(macKey);
-            byte[] tag = mac.doFinal(data.getBytes());
-            return new String(tag);
+            return mac.doFinal(data);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
 
-//    private static String authenticateData(String data, String authenKey) {
-//
-//    }
+    /**
+     * split the data to message amd tag and checks if : tag = MAC(message,key).
+     * if yes return message, else return null.
+     * @param data
+     * @param authenKey
+     * @return
+     */
+    private static byte[] authenticateData(byte[] data, byte[] authenKey) {
+        try {
+            SecretKeySpec macKey = new SecretKeySpec(authenKey, "HmacSHA256");
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(macKey);
+            int messageLength = data.length - 32; // 32 is the tag length in bytes = 256bit.
+            byte[] message=new byte[messageLength];
+            byte[] tag = new byte[32];
+            System.arraycopy(data, 0, message, 0, messageLength);
+            System.arraycopy(data, messageLength, tag, 0, tag.length);
+            if(Arrays.equals(mac.doFinal(message), tag))
+                return  message;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

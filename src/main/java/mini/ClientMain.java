@@ -27,8 +27,8 @@ public class ClientMain {
     private static final String PASSWORD_SUFFIX_ENCRYPTION = "1";           //suffix added to the password for hashing - after hash-would be used for file & file name encryption
     private static final String PASSWORD_SUFFIX_AUTHENTICATION = "2";      //suffix added to the password for hashing - after hash-would be used for authentication
     private static final String PASSWORD_SUFFIX_PASSWORD = "3";             //suffix added to the password for hashing - after hash- would be the user's password
-    private static String key1ForEncryption;
-    private static String key2ForAuthen;
+    private static byte[] key1ForEncryption;
+    private static byte[] key2ForAuthen;
     private static String key3ForPassword;
 
     private static final Logger logger = Logger.getLogger("client_logger");
@@ -72,7 +72,7 @@ public class ClientMain {
 
         FTPClient client = connectToServer("127.0.0.1");
         if (client != null) {
-            ClientHandler handler = new ClientHandler(key1ForEncryption,key2ForAuthen,key3ForPassword);
+            ClientHandler handler = new ClientHandler(key1ForEncryption,key2ForAuthen);
             handler.handleConnection(client);
         }
         else
@@ -194,9 +194,10 @@ public class ClientMain {
      * @param password
      */
     private static void deriveKeys(String password) {
-        key1ForEncryption = DigestUtils.sha256Hex(password + PASSWORD_SUFFIX_ENCRYPTION);
-        key2ForAuthen = DigestUtils.sha256Hex(password + PASSWORD_SUFFIX_AUTHENTICATION);
+        key1ForEncryption = DigestUtils.sha256(password + PASSWORD_SUFFIX_ENCRYPTION);
+        key2ForAuthen = DigestUtils.sha256(password + PASSWORD_SUFFIX_AUTHENTICATION);
         key3ForPassword = DigestUtils.sha256Hex(password + PASSWORD_SUFFIX_PASSWORD);
+        System.out.println(key1ForEncryption.length);
     }
 
 }
