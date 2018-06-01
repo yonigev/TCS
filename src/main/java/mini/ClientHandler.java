@@ -194,7 +194,11 @@ public class ClientHandler {
     private  String decryptAndAuthName(String encName){
         byte[] encAuthNameBytes=encName.getBytes();
         byte[] encNameBytes=authenticateData(encAuthNameBytes,key2ForAuthen);
-        byte[] nameBytes=decryptData(encAuthNameBytes,key1ForEncryption);
+        if(encNameBytes == null) {
+            System.out.println("File name Authentication failed");
+            return null;
+        }
+        byte[] nameBytes=decryptData(encNameBytes,key1ForEncryption);
         return Arrays.toString(nameBytes);
     }
         /**
@@ -271,7 +275,10 @@ public class ClientHandler {
             String[] names = client.listNames();
             if (names != null && names.length > 0) {
                 for (String fileName : names) {
-                    System.out.println(decryptAndAuthName(fileName));
+                    String decName=decryptAndAuthName(fileName);
+                    if(decName == null)
+                        return;
+                    System.out.println(decName);
                 }
             }
         } catch (IOException e) {
