@@ -2,6 +2,7 @@ package mini;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.commons.net.ftp.FTPClient;
 
 import javax.crypto.Cipher;
@@ -9,11 +10,13 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.security.Key;
-import java.util.Arrays;
-import java.util.Scanner;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.net.ftp.FTPFile;
 
 public class ClientHandler {
     private static final String FILE_DELETION_SUCCESS = "File Successfully Deleted : ";
@@ -52,16 +55,19 @@ public class ClientHandler {
             if (command.length > 0) {
                 switch (command[0]) {
                     case "ls":
-                        handleListCommand(client);
+                        handleListCommand();
+                        break;
+                    case "meta":
+                        handleMeta(command);
                         break;
                     case "write":
-                        handleWrite(client, command);
+                        handleWrite(command);
                         break;
                     case "read":
-                        handleRead(client, command);
+                        handleRead(command);
                         break;
                     case "delete":
-                        handleDelete(client, command);
+                        handleDelete(command);
                     case "exit":
                         try {
                             client.logout();
@@ -72,7 +78,7 @@ public class ClientHandler {
                         }
                         break;
                     case "rename":
-                        handleRename(client, command);
+                        handleRename(command);
                         break;
                     default:
                         System.out.println("Unknown command");
@@ -89,10 +95,9 @@ public class ClientHandler {
     /**
      * Handles the "rename" command
      *
-     * @param client
      * @param command
      */
-    private void handleRename(FTPClient client, String[] command) {
+    private void handleRename(String[] command) {
         if (command.length == 3) {
             try {
 
@@ -106,13 +111,13 @@ public class ClientHandler {
             System.out.println(FILE_RENAME_ILLEGAL);
     }
 
-    private void handleDelete(FTPClient client, String[] command) {
+    private void handleDelete(String[] command) {
 
         for (String name : command) {
             if (name.equals(command[0])) //skip command name
                 continue;
             try {
-                if (client.deleteFile(name)) {
+                if (client.deleteFile(Arrays.toString(encryptAndTagName(name)))) {
                     System.out.print(FILE_DELETION_SUCCESS);
                     System.out.println(name);
                 } else {
@@ -128,7 +133,7 @@ public class ClientHandler {
 
     }
 
-    private void handleRead(FTPClient client, String[] command) {
+    private void handleRead(String[] command) {
         for (int i = 1; i < command.length; i++) {
             String name = command[i];
             File file = new File(name);
@@ -216,10 +221,9 @@ public class ClientHandler {
     }
         /**
          * Handles a write command
-         * @param client
          * @param command
          */
-    private void handleWrite(FTPClient client, String[] command) {
+    private void handleWrite(String[] command) {
         for (String filePath : command) {
             if (ArrayUtils.indexOf(command, filePath) == 0)
                 continue;
@@ -230,7 +234,7 @@ public class ClientHandler {
                 byte[] encAuthFileName=encryptAndTagName(getNameFromPath(path));
                 InputStream readyForWriting=encryptAndTagFile(file);
                 //if file exists
-                if (ArrayUtils.contains(client.listNames(), getNameFromPath(filePath))) {
+                if (ArrayUtils.contains(client.listNames(), Arrays.toString(encAuthFileName))) {
                     //ask user to overwrite
                     if (promptOverWrite(getNameFromPath(filePath))) {
                         client.storeFile(Arrays.toString(encAuthFileName),readyForWriting);
@@ -281,9 +285,8 @@ public class ClientHandler {
     /**
      * Handles an "ls" command
      *
-     * @param client
      */
-    private void handleListCommand(FTPClient client) {
+    private void handleListCommand() {
         try {
             String[] names = client.listNames();
             if (names != null && names.length > 0) {
@@ -366,7 +369,7 @@ public class ClientHandler {
      * @param authenKey
      * @return
      */
-    private static byte[] authenticateData(byte[] data, byte[] authenKey) {
+    private byte[] authenticateData(byte[] data, byte[] authenKey) {
         try {
             SecretKeySpec macKey = new SecretKeySpec(authenKey, "HmacSHA256");
             Mac mac = Mac.getInstance("HmacSHA256");
@@ -383,4 +386,40 @@ public class ClientHandler {
         }
         return null;
     }
+
+    /**
+     * Handles the meta command
+     * @param command
+     * @return
+     */
+    private void handleMeta(String[] command){
+        if(command.length < 2 ){
+            System.out.println("Wrong usage of the Meta command. ");
+            return;
+        }
+        String filename=command[1];
+        try {
+            FTPFile[] allFiles=client.listFiles();
+            String encFilename=Arrays.toString(encryptAndTagName(filename));  //the encrypted file name
+            for (FTPFile file: allFiles){
+                if(file.getName().equals(encFilename)){
+                    String size=Long.toString(file.getSize()) + "Bytes";
+                    Calendar dateModified=file.getTimestamp();
+//                    String timezone=System.getProperty("user.timezone");
+//                    dateModified.setTimeZone(TimeZone.getTimeZone(timezone));        //set as current time zone
+
+                    SimpleDateFormat format = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+                    format.setTimeZone(TimeZone.getDefault());
+
+                    System.out.println("Name: " + filename + "\n" + "Size: "+ size +"\n"+"Last Modified: "+format.format(dateModified.getTime()));
+
+
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
