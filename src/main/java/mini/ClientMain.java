@@ -13,11 +13,10 @@ import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 
 public class ClientMain {
-    private static final String DEFAULT_LOGIN = "anonymous";
-    static String REGISTER_COMMAND = "USER !REGISTER!";
+    private static String REGISTER_COMMAND = "USER !REGISTER!";
     private static final String ILLEGAL_INPUT = "Illegal Input!";
     private static final String LOGIN_PROMPT = "Welcome!\nLogin to Existing Account? (y/n):";
-    protected static final String REGISTER_PROMPT = "Enter <username> <password> for the new user";
+    private static final String REGISTER_PROMPT = "Enter <username> <password> for the new user";
     private static final String USERNAME_PROMPT = "Enter your Username ";
     private static final String PASSWORD_PROMPT = "Enter your Password ";
     private static final String CONNECTION_ERROR = "Error! cannot connect to server ";
@@ -33,55 +32,20 @@ public class ClientMain {
 
     private static final Logger logger = Logger.getLogger("client_logger");
 
-    public static File make_test_file() {
-        File file = new File("test.txt");
-        try {
-            FileWriter fw = new FileWriter(file);
 
-            fw.write("ABCDE");
-            fw.flush();
-            return file;
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    /**
-     * If user exists, login
-     *
-     * @param client
-     * @param serverAddress
-     * @throws IOException
-     */
-    private void tryConnectExistingUser(FTPClient client, String serverAddress) throws IOException {
-        client.connect(serverAddress, 55555);
-
-    }
 
     public static void main(String[] args) {
-//        try {
-//            secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256"); //TODO: READ ABOUT THIS.
-//            logger.info("secretKeyFactory: "+secretKeyFactory);
-//
-//
-//        } catch (NoSuchAlgorithmException e) {
-//            e.printStackTrace();
-//        }
-
-        FTPClient client = connectToServer("127.0.0.1");
+        FTPClient client = connectToServer("127.0.0.1"); //TODO: change IP .
         if (client != null) {
-            ClientHandler handler = new ClientHandler(key1ForEncryption,key2ForAuthen);
-            handler.handleConnection(client);
+            ClientHandler handler = new ClientHandler(client,key1ForEncryption,key2ForAuthen);
+            handler.handleConnection();
         }
         else
             logger.info("Error:: client got null , can't handle");
     }
 
     /**
-     * Connect and login to the FTP Server. (register to server if required.)
-     *
+     * Connect and login to the FTP Server. (register to server if required.
      * @return the FTPClient
      */
     private static FTPClient connectToServer(String serverAddress) {
@@ -122,7 +86,7 @@ public class ClientMain {
      * @param client
      */
     private static boolean registerNewAccount(FTPClient client) {
-        //System.out.println(REGISTER_PROMPT);            //print a message to the user
+        System.out.println(REGISTER_PROMPT);            //print a message to the user
         Scanner sc = new Scanner(System.in);
         String username;
         String password;
@@ -130,15 +94,8 @@ public class ClientMain {
         username = sc.next();
         System.out.println(PASSWORD_PROMPT + "to register");
         password = sc.next();
-
         deriveKeys(password);
-        //String encryptedData = encryptData(key3ForPassword, key1ForEncryption);
-        //String authenticationTag = getAuthenticationTag(key3ForPassword, key2ForAuthen);
-
-
         String commandToSend = REGISTER_COMMAND + " " + username + " " + key3ForPassword;   //the command we will send to the server
-        //logger.info("Registering- " + commandToSend);
-        //logger.info("STAM BISHVIL LIROT:" + key3ForPassword );
         try {
             client.sendCommand(commandToSend);                              //send a registration request
             int reply = client.getReply();                                    //get a reply back from the server
@@ -176,10 +133,6 @@ public class ClientMain {
         deriveKeys(password);
         try {
             boolean success = client.login(username, key3ForPassword);
-            // logger.info("LOGIN with password "+encryptPassword(password,PASSWORD_SUFFIX_LOGIN).toString());
-//            if (success) {
-//                encryptionKey = encryptPassword(password, PASSWORD_SUFFIX_ENCRYPTION);
-//            }
             System.out.println(client.getReplyString());
             return success;
         } catch (IOException e) {
@@ -190,14 +143,12 @@ public class ClientMain {
 
     /**
      * Setting up all 3 keys
-     *
      * @param password
      */
     private static void deriveKeys(String password) {
         key1ForEncryption = DigestUtils.sha256(password + PASSWORD_SUFFIX_ENCRYPTION);
         key2ForAuthen = DigestUtils.sha256(password + PASSWORD_SUFFIX_AUTHENTICATION);
         key3ForPassword = DigestUtils.sha256Hex(password + PASSWORD_SUFFIX_PASSWORD);
-        System.out.println(key1ForEncryption.length);
     }
 
 }

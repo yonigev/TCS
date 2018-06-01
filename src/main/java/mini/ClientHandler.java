@@ -23,8 +23,10 @@ public class ClientHandler {
     private static final Logger logger = Logger.getLogger("clientHandler_logger");
     private byte[] key1ForEncryption;
     private byte[] key2ForAuthen;
+    private FTPClient client;
 
-    ClientHandler(byte[] key1ForEncryption, byte[] key2ForAuthen) {
+    ClientHandler(FTPClient client, byte[] key1ForEncryption, byte[] key2ForAuthen) {
+        this.client=client;
         this.key1ForEncryption = key1ForEncryption;
         this.key2ForAuthen = key2ForAuthen;
     }
@@ -32,13 +34,11 @@ public class ClientHandler {
     /**
      * Handles the connection to the server
      *
-     * @param client
      */
-    public void handleConnection(FTPClient client) {
+    public void handleConnection() {
 
         String input;
         String[] command;
-
 
         while (client.isConnected()) {
             Scanner sc = new Scanner(System.in);
@@ -71,10 +71,7 @@ public class ClientHandler {
                         break;
                     default:
                         System.out.println("Unknown command");
-
-
                 }
-
 
             } else {
                 //TODO: COMMAND INPUT ERROR
@@ -93,12 +90,13 @@ public class ClientHandler {
     private void handleRename(FTPClient client, String[] command) {
         if (command.length == 3) {
             try {
-                client.rename(command[1], command[2]);
+
+                byte[] originEncTag=encryptAndTagName(command[1]);     //original file name - encrypted and tagged
+                byte[] changeToEncTag=encryptAndTagName(command[2]);   //new file name -  same
+                client.rename(Arrays.toString(originEncTag), Arrays.toString(changeToEncTag));
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-
         } else
             System.out.println(FILE_RENAME_ILLEGAL);
     }
@@ -131,11 +129,12 @@ public class ClientHandler {
             File file = new File(name);
 
             try {
-                if (!file.exists())
+                if (!file.exists());
                     file.createNewFile();
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                client.retrieveFile(name,out);
+                client.retrieveFile(Arrays.toString(encryptAndTagName(name)),out);
                 byte[] bytesRead = out.toByteArray();
+                out.close();
                 byte[] encryptedFile = authenticateData(bytesRead , key2ForAuthen);
                 if(encryptedFile==null) {
                     System.out.println("file damaged");
@@ -151,36 +150,82 @@ public class ClientHandler {
     }
 
 
+    /**
+     *Encrypt a file and add a tag (suffix) for authentication
+     * @param file
+     * @return a InputStream ready to be sent to server
+     * @throws IOException
+     */
+    private InputStream encryptAndTagFile(File file) throws IOException {
+        FileInputStream fis= new FileInputStream(file);
+        byte[] originBytesToWrite = IOUtils.toByteArray(fis);
+        byte[] encryptedBytesToWrite = encryptData(originBytesToWrite, key1ForEncryption);
+        byte[] tag = getAuthenticationTag(encryptedBytesToWrite, key2ForAuthen);
+        //merging 2 bytes array encryptedBytesToWrite + tag
+        byte[] bytesToWrite = new byte[encryptedBytesToWrite.length + tag.length];
+        System.arraycopy(encryptedBytesToWrite, 0, bytesToWrite, 0, encryptedBytesToWrite.length);
+        System.arraycopy(tag, 0, bytesToWrite, encryptedBytesToWrite.length, tag.length);
+        fis.close();
+
+        return new ByteArrayInputStream(bytesToWrite);
+    }
+
+    /**
+     * Encrypt a file name
+     * @param originFileName
+     * @return
+     * @throws IOException
+     */
+    private byte[] encryptAndTagName(String  originFileName) throws IOException {
+        byte[] originBytes=originFileName.getBytes();
+        byte[] encryptedNameBytes=encryptData(originBytes,key1ForEncryption);
+        byte[] tag=getAuthenticationTag(encryptedNameBytes,key2ForAuthen);
+        byte[] ready=new byte[encryptedNameBytes.length + tag.length];
+        System.arraycopy(encryptedNameBytes,0,ready,0,encryptedNameBytes.length);
+        System.arraycopy(tag,0,ready,encryptedNameBytes.length,tag.length);
+        return  ready;
+    }
+
+    /**
+     * Decrypt and Authenticate a file name
+     * @param encName
+     * @return
+     */
+    private  String decryptAndAuthName(String encName){
+        byte[] encAuthNameBytes=encName.getBytes();
+        byte[] encNameBytes=authenticateData(encAuthNameBytes,key2ForAuthen);
+        byte[] nameBytes=decryptData(encAuthNameBytes,key1ForEncryption);
+        return Arrays.toString(nameBytes);
+    }
+        /**
+         * Handles a write command
+         * @param client
+         * @param command
+         */
     private void handleWrite(FTPClient client, String[] command) {
         for (String filePath : command) {
             if (ArrayUtils.indexOf(command, filePath) == 0)
                 continue;
             String path = filePath;
+
             File file = new File(path);
             try {
-                FileInputStream fis= new FileInputStream(file);
-                byte[] originBytesToWrite = IOUtils.toByteArray(fis);
-                byte[] encryptedBytesToWrite = encryptData(originBytesToWrite, key1ForEncryption);
-                byte[] tag = getAuthenticationTag(encryptedBytesToWrite, key2ForAuthen);
-                //merging 2 bytes array encryptedBytesToWrite + tag
-                byte[] bytesToWrite = new byte[encryptedBytesToWrite.length + tag.length];
-                System.arraycopy(encryptedBytesToWrite, 0, bytesToWrite, 0, encryptedBytesToWrite.length);
-                System.arraycopy(tag, 0, bytesToWrite, encryptedBytesToWrite.length, tag.length);
-
-                InputStream inputToWrite = new ByteArrayInputStream(bytesToWrite);
+                byte[] encAuthFileName=encryptAndTagName((getNameFromPath(path)));
+                InputStream readyForWriting=encryptAndTagFile(file);
                 //if file exists
                 if (ArrayUtils.contains(client.listNames(), getNameFromPath(filePath))) {
                     //ask user to overwrite
                     if (promptOverWrite(getNameFromPath(filePath))) {
-                        client.storeFile(getNameFromPath(path),inputToWrite);
+                        client.storeFile(Arrays.toString(encAuthFileName),readyForWriting);
+
                         System.out.println(client.getReplyString());
                     }
-                } else {
-                    client.storeFile(getNameFromPath(path), inputToWrite);
+                }
+                else {
+                    client.storeFile(Arrays.toString(encAuthFileName), readyForWriting);
                     System.out.println(client.getReplyString());
                 }
-                inputToWrite.close();
-                fis.close();
+                readyForWriting.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -188,6 +233,11 @@ public class ClientHandler {
         }
     }
 
+    /**
+     * Prompts the user for overwriting a file
+     * @param name
+     * @return
+     */
     private boolean promptOverWrite(String name) {
         System.out.print(name + " : ");
         System.out.println(FILE_OVERWRITE_PROMPT);
@@ -221,7 +271,7 @@ public class ClientHandler {
             String[] names = client.listNames();
             if (names != null && names.length > 0) {
                 for (String fileName : names) {
-                    System.out.println(fileName);
+                    System.out.println(decryptAndAuthName(fileName));
                 }
             }
         } catch (IOException e) {
@@ -290,7 +340,7 @@ public class ClientHandler {
     }
 
     /**
-     * split the data to message amd tag and checks if : tag = MAC(message,key).
+     * split the data to message and tag and checks if : tag = MAC(message,key).
      * if yes return message, else return null.
      * @param data
      * @param authenKey
