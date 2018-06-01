@@ -29,6 +29,11 @@ public class ClientHandler {
         this.client=client;
         this.key1ForEncryption = key1ForEncryption;
         this.key2ForAuthen = key2ForAuthen;
+        try {
+            client.setFileType(FTPClient.BINARY_FILE_TYPE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -192,14 +197,22 @@ public class ClientHandler {
      * @return
      */
     private  String decryptAndAuthName(String encName){
-        byte[] encAuthNameBytes=encName.getBytes();
+        String[] byteValues = encName.substring(1, encName.length() - 1).split(",");
+        byte[] encAuthNameBytes = new byte[byteValues.length];
+        for (int i=0, len=encAuthNameBytes.length; i<len; i++) {
+            encAuthNameBytes[i] = Byte.parseByte(byteValues[i].trim());
+        }
+       // byte[] encAuthNameBytes=encName.getBytes();
         byte[] encNameBytes=authenticateData(encAuthNameBytes,key2ForAuthen);
         if(encNameBytes == null) {
             System.out.println("File name Authentication failed");
             return null;
         }
         byte[] nameBytes=decryptData(encNameBytes,key1ForEncryption);
-        return Arrays.toString(nameBytes);
+        if (nameBytes != null) {
+            return new String(nameBytes);
+        }
+        else return null;
     }
         /**
          * Handles a write command
@@ -214,7 +227,7 @@ public class ClientHandler {
 
             File file = new File(path);
             try {
-                byte[] encAuthFileName=encryptAndTagName((getNameFromPath(path)));
+                byte[] encAuthFileName=encryptAndTagName(getNameFromPath(path));
                 InputStream readyForWriting=encryptAndTagFile(file);
                 //if file exists
                 if (ArrayUtils.contains(client.listNames(), getNameFromPath(filePath))) {
