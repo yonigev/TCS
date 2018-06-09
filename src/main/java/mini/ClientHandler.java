@@ -19,14 +19,14 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.net.ftp.FTPFile;
 
 public class ClientHandler {
-    private static final String FILE_DELETION_SUCCESS = "File Successfully Deleted : ";
-    private static final String FILE_DELETION_FAILURE = "File Could not be Deleted : ";
-    private static final String FILE_OVERWRITE_PROMPT = "File already exists. overwrite? y/n";
-    private static final String FILE_RENAME_ILLEGAL = "Illegal Number of Arguments ";
-    private static final Logger logger = Logger.getLogger("clientHandler_logger");
-    private byte[] key1ForEncryption;
-    private byte[] key2ForAuthen;
-    private FTPClient client;
+    protected static final String FILE_DELETION_SUCCESS = "File Successfully Deleted : ";
+    protected static final String FILE_DELETION_FAILURE = "File Could not be Deleted : ";
+    protected static final String FILE_OVERWRITE_PROMPT = "File already exists. overwrite? y/n";
+    protected static final String FILE_RENAME_ILLEGAL = "Illegal Number of Arguments ";
+    protected static final Logger logger = Logger.getLogger("clientHandler_logger");
+    protected byte[] key1ForEncryption;
+    protected byte[] key2ForAuthen;
+    protected FTPClient client;
 
     ClientHandler(FTPClient client, byte[] key1ForEncryption, byte[] key2ForAuthen) {
         this.client=client;
@@ -97,7 +97,7 @@ public class ClientHandler {
      *
      * @param command
      */
-    private void handleRename(String[] command) {
+    protected void handleRename(String[] command) {
         if (command.length == 3) {
             try {
 
@@ -111,7 +111,7 @@ public class ClientHandler {
             System.out.println(FILE_RENAME_ILLEGAL);
     }
 
-    private void handleDelete(String[] command) {
+    protected void handleDelete(String[] command) {
 
         for (String name : command) {
             if (name.equals(command[0])) //skip command name
@@ -133,7 +133,7 @@ public class ClientHandler {
 
     }
 
-    private void handleRead(String[] command) {
+    protected void handleRead(String[] command) {
         for (int i = 1; i < command.length; i++) {
             String name = command[i];
             File file = new File(name);
@@ -166,7 +166,7 @@ public class ClientHandler {
      * @return a InputStream ready to be sent to server
      * @throws IOException
      */
-    private InputStream encryptAndTagFile(File file) throws IOException {
+    protected InputStream encryptAndTagFile(File file) throws IOException {
         FileInputStream fis= new FileInputStream(file);
         byte[] originBytesToWrite = IOUtils.toByteArray(fis);
         byte[] encryptedBytesToWrite = encryptData(originBytesToWrite, key1ForEncryption);
@@ -186,7 +186,7 @@ public class ClientHandler {
      * @return
      * @throws IOException
      */
-    private byte[] encryptAndTagName(String  originFileName) throws IOException {
+    protected byte[] encryptAndTagName(String  originFileName) throws IOException {
         byte[] originBytes=originFileName.getBytes();
         byte[] encryptedNameBytes=encryptData(originBytes,key1ForEncryption);
         byte[] tag=getAuthenticationTag(encryptedNameBytes,key2ForAuthen);
@@ -201,7 +201,7 @@ public class ClientHandler {
      * @param encName
      * @return
      */
-    private  String decryptAndAuthName(String encName){
+    protected  String decryptAndAuthName(String encName){
         String[] byteValues = encName.substring(1, encName.length() - 1).split(",");
         byte[] encAuthNameBytes = new byte[byteValues.length];
         for (int i=0, len=encAuthNameBytes.length; i<len; i++) {
@@ -223,7 +223,7 @@ public class ClientHandler {
          * Handles a write command
          * @param command
          */
-    private void handleWrite(String[] command) {
+    protected void handleWrite(String[] command) {
         for (String filePath : command) {
             if (ArrayUtils.indexOf(command, filePath) == 0)
                 continue;
@@ -259,7 +259,7 @@ public class ClientHandler {
      * @param name
      * @return
      */
-    private boolean promptOverWrite(String name) {
+    protected boolean promptOverWrite(String name) {
         System.out.print(name + " : ");
         System.out.println(FILE_OVERWRITE_PROMPT);
         Scanner sc = new Scanner(System.in);
@@ -274,7 +274,7 @@ public class ClientHandler {
      * @param path
      * @return
      */
-    private String getNameFromPath(String path) {
+    protected String getNameFromPath(String path) {
         if (path.contains("\\")) {
             String[] path_names = path.split("\\\\");
             return path_names[path_names.length - 1];
@@ -286,7 +286,7 @@ public class ClientHandler {
      * Handles an "ls" command
      *
      */
-    private void handleListCommand() {
+    protected void handleListCommand() {
         try {
             String[] names = client.listNames();
             if (names != null && names.length > 0) {
@@ -310,7 +310,7 @@ public class ClientHandler {
      * @param encryptionKey
      * @return
      */
-    private byte[] encryptData(byte[] data, byte[] encryptionKey) {
+    protected byte[] encryptData(byte[] data, byte[] encryptionKey) {
         try {
             Key aesKey = new SecretKeySpec(encryptionKey, "AES");
             Cipher cipher = Cipher.getInstance("AES");
@@ -330,7 +330,7 @@ public class ClientHandler {
      * @param encryptionKey
      * @return
      */
-    private byte[] decryptData(byte[] encryptedData, byte[] encryptionKey) {
+    protected byte[] decryptData(byte[] encryptedData, byte[] encryptionKey) {
         try {
             Key aesKey = new SecretKeySpec(encryptionKey, "AES");
             Cipher cipher = Cipher.getInstance("AES");
@@ -350,7 +350,7 @@ public class ClientHandler {
      * @param authenKey
      * @return
      */
-    private byte[] getAuthenticationTag(byte[] data, byte[] authenKey) {
+    protected byte[] getAuthenticationTag(byte[] data, byte[] authenKey) {
         try {
             SecretKeySpec macKey = new SecretKeySpec(authenKey, "HmacSHA256");
             Mac mac = Mac.getInstance("HmacSHA256");
@@ -369,7 +369,7 @@ public class ClientHandler {
      * @param authenKey
      * @return
      */
-    private byte[] authenticateData(byte[] data, byte[] authenKey) {
+    protected byte[] authenticateData(byte[] data, byte[] authenKey) {
         try {
             SecretKeySpec macKey = new SecretKeySpec(authenKey, "HmacSHA256");
             Mac mac = Mac.getInstance("HmacSHA256");
@@ -392,7 +392,7 @@ public class ClientHandler {
      * @param command
      * @return
      */
-    private void handleMeta(String[] command){
+    protected void handleMeta(String[] command){
         if(command.length < 2 ){
             System.out.println("Wrong usage of the Meta command. ");
             return;
