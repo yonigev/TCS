@@ -63,12 +63,15 @@ public class ClientHandler {
                         break;
                     case "write":
                         handleWrite(command);
+                        writeMFileOnServer();
                         break;
                     case "read":
                         handleRead(command);
                         break;
                     case "delete":
                         handleDelete(command);
+                        writeMFileOnServer();
+                        break;
                     case "exit":
                         try {
                             client.logout();
@@ -80,6 +83,7 @@ public class ClientHandler {
                         break;
                     case "rename":
                         handleRename(command);
+                        writeMFileOnServer();
                         break;
                     default:
                         System.out.println("Unknown command");
@@ -91,7 +95,6 @@ public class ClientHandler {
 
 
         }
-        writeMFileOnServer();
     }
 
     /**
@@ -253,6 +256,7 @@ public class ClientHandler {
             }
 
         }
+
     }
 
     /**
@@ -445,12 +449,12 @@ public class ClientHandler {
             if (managementData == null)
                 return false;
             byte[] currentMetaData = getCurrentMetaData();
+            //TODO: check if both current meta data and Management data is the same!!
             if (Arrays.equals(managementData, currentMetaData))
                 return true;
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         return false;
     }
 

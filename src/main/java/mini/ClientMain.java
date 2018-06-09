@@ -127,9 +127,10 @@ public class ClientMain {
             System.out.println(client.getReplyString());
             if (reply != REGISTRATION_SUCCESS) {                                //if NOT successful
                 return false;
-            } else
+            } else {
+                ClientHandler.writeMFileOnServer();
                 return true;
-
+            }
 
         } catch (IOException e) {
             e.printStackTrace();
