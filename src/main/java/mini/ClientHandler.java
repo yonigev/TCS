@@ -1,5 +1,6 @@
 package mini;
 
+import javafx.util.Pair;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
@@ -22,7 +23,8 @@ public class ClientHandler {
     protected static final String FILE_DELETION_SUCCESS = "File Successfully Deleted : ";
     protected static final String FILE_DELETION_FAILURE = "File Could not be Deleted : ";
     protected static final String FILE_OVERWRITE_PROMPT = "File already exists. overwrite? y/n";
-    protected static final String FILE_RENAME_ILLEGAL = "Illegal Number of Arguments ";
+    protected static final String FILE_RENAME_ILLEGAL   = "Illegal Number of Arguments ";
+    protected static final String MFILE_NAME            = "nothing_important_here";
     protected static final Logger logger = Logger.getLogger("clientHandler_logger");
     protected byte[] key1ForEncryption;
     protected byte[] key2ForAuthen;
@@ -133,7 +135,7 @@ public class ClientHandler {
 
     }
 
-    protected void handleRead(String[] command) {
+    protected int handleRead(String[] command) {
         for (int i = 1; i < command.length; i++) {
             String name = command[i];
             File file = new File(name);
@@ -148,15 +150,18 @@ public class ClientHandler {
                 byte[] encryptedFile = authenticateData(bytesRead , key2ForAuthen);
                 if(encryptedFile==null) {
                     System.out.println("file damaged");
-                    return;
+                    return -1;
                 }
                 byte[] originFile = decryptData(encryptedFile,key1ForEncryption);
                 FileUtils.writeByteArrayToFile(file, originFile); // writing byte array to file
                 System.out.println(client.getReplyString());
+                return client.getReply();
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+        return 0;
     }
 
 
@@ -422,4 +427,19 @@ public class ClientHandler {
         }
     }
 
+
+
+
+    protected int updateMFile(String opcode, String old_filename, String new_filename){
+
+
+
+
+
+
+
+
+
+
+    }
 }
