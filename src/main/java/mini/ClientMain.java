@@ -102,10 +102,10 @@ public class ClientMain {
             System.out.println(client.getReplyString());
             if (reply != REGISTRATION_SUCCESS) {                                //if NOT successful
                 return false;
-            } else
+            } else{
+                ClientHandler.writeMFileOnServer();
                 return true;
-
-
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return false;
@@ -139,6 +139,10 @@ public class ClientMain {
 
     public static boolean GUI_loginExistingAccount(FTPClient client, String username, String password) {
         deriveKeys(password);
+        if(!ClientHandler.authenticateMFileData()) {
+            System.out.println("Management File Damaged");
+            return false;
+        }
         try {
             boolean success_login = client.login(username, key3ForPassword);
             System.out.println(client.getReplyString());
@@ -170,6 +174,10 @@ public class ClientMain {
             System.out.println(ILLEGAL_INPUT);
         }
         deriveKeys(password);
+        if(!ClientHandler.authenticateMFileData()) {
+            System.out.println("Management File Damaged");
+            return false;
+        }
         try {
             boolean success = client.login(username, key3ForPassword);
             System.out.println(client.getReplyString());
