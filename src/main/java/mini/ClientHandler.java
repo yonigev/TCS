@@ -226,7 +226,7 @@ public class ClientHandler {
                         System.out.println(ClientMain.client.getReplyString());
                     }
                 } else {
-                    if(ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting))
+                    ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
                     System.out.println(ClientMain.client.getReplyString());
                 }
                 readyForWriting.close();
@@ -373,7 +373,6 @@ public class ClientHandler {
             byte[] tag = new byte[32];
             System.arraycopy(data, 0, message, 0, messageLength);
             System.arraycopy(data, messageLength, tag, 0, tag.length);
-            byte[] newTag=mac.doFinal(message);
             if (Arrays.equals(mac.doFinal(message), tag))
                 return message;
         } catch (Exception e) {
@@ -439,13 +438,16 @@ public class ClientHandler {
 
     protected static void writeMFileOnServer() {
         try {
+            System.out.println("Writing a new MFile on server!");
             byte[] currentMetaData = getCurrentMetaData();
             //System.out.println("meta data byte array length:  "+currentMetaData.length);
             byte[] encAuthFileName = encryptAndTagName(MFILE_NAME);
             InputStream in = new ByteArrayInputStream(currentMetaData);
             InputStream readyForWriting = encryptAndTagFile(in);
             //System.out.println("the bytes we store in server as string :" + base32.encodeAsString(IOUtils.toByteArray(readyForWriting)));
-            ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
+            if(!ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting)){
+                System.out.println("Error storing new MFile!");
+            }
             readyForWriting.close();
             System.out.println(ClientMain.client.getReplyString());
         } catch (IOException e) {
@@ -460,11 +462,14 @@ public class ClientHandler {
      */
     protected static boolean authenticateMFileData() {
         try {
+            byte[] currentMetaData = getCurrentMetaData();
+            System.out.println("Trying to Authenticate MFile");
             //READ the file byte data to Client RAM (authenticated and decrypted)
             byte[] managementData = readFileToRAM(MFILE_NAME);
-            if (managementData == null)
+            if (managementData == null) {
+                System.out.println("authenticateMFileData   -   readFileToRam is NULL!!");
                 return false;
-            byte[] currentMetaData = getCurrentMetaData();
+            }
             return hashCompareByteArrays(currentMetaData,managementData);
         } catch (IOException e) {
             e.printStackTrace();
@@ -480,13 +485,17 @@ public class ClientHandler {
      */
     private static byte[] getCurrentMetaData() {
         try {
+            System.out.println("Entered getCurrentMetaData");
             //list all files
             FTPFile[] files = ClientMain.client.listFiles();
             if(files != null){
+                System.out.println("Num of files on server: "+Integer.toString(files.length));
                 StringBuilder stringBuilder=new StringBuilder();
                 for(FTPFile f: files){
-                    if(f.getName().equals(base32.encodeAsString(encryptAndTagName(MFILE_NAME))))  //ignore the management file
+                    if(f.getName().equals(base32.encodeAsString(encryptAndTagName(MFILE_NAME)))) {  //ignore the management file
+                        System.out.println("Skipping Management file in getCurrentMetaData");
                         continue;
+                    }
                     //append file name
                     stringBuilder.append(f.getName()+",");
                     //append file size
@@ -497,6 +506,9 @@ public class ClientHandler {
                     stringBuilder.append('\n');
                 }
                 return stringBuilder.toString().getBytes();
+            }
+            else{
+                System.out.println("ClientMain.client.listFiles()   =   RETURNED NULL");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -513,7 +525,9 @@ public class ClientHandler {
      */
     private static byte[] readFileToRAM(String fileName) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ClientMain.client.retrieveFile(base32.encodeAsString(encryptAndTagName(fileName)), out);
+        if(!ClientMain.client.retrieveFile(base32.encodeAsString(encryptAndTagName(fileName)), out)){
+            System.out.println("readFileToRam with  -"+fileName+" has failed");
+        }
         byte[] bytesRead = out.toByteArray();
         out.close();
         byte[] encryptedFile = authenticateData(bytesRead, ClientMain.key2ForAuthen);

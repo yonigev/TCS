@@ -178,8 +178,10 @@ public class ClientMain {
             System.out.println(client.getReplyString());
 
             if(success){
-                if(justRegistered)
+                if(justRegistered) {
+                    System.out.println("Writing Management file for first time");
                     ClientHandler.writeMFileOnServer();
+                }
                 else if(!ClientHandler.authenticateMFileData()) {
                         System.out.println("Management File Damaged");
                         return false;
