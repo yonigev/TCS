@@ -401,6 +401,7 @@ public class ClientHandler {
             String encFilename = Arrays.toString(encryptAndTagName(filename));  //the encrypted file name
             for (FTPFile file : allFiles) {
                 if (file.getName().equals(encFilename)) {
+                    //create the File MetaData Object  to Return;
                     FileMetaData metaToReturn=new FileMetaData(filename,file.getTimestamp(),file.getSize());
 
                     String size = Long.toString(file.getSize()) + "Bytes";

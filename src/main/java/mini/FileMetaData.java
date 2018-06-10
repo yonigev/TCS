@@ -1,6 +1,8 @@
 package mini;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.TimeZone;
 
 public class FileMetaData {
     String filename;
@@ -25,4 +27,23 @@ public class FileMetaData {
     public Long getFilesize() {
         return filesize;
     }
+
+
+    /**
+     * @return return an array containing <size, date-modified>
+     */
+    public String[] toMinimalArray(){
+        String size = Long.toString(filesize)+ " bytes";
+        SimpleDateFormat format = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        format.setTimeZone(TimeZone.getDefault());
+        String date =  format.format(fileDateLastChanged.getTime());
+        String[] toReturn=new String[3];
+        toReturn[0] = filename;
+        toReturn[1] = size;
+        toReturn[2] = date;
+        return toReturn;
+    }
+
+
+
 }
