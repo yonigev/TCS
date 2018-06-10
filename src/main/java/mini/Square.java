@@ -7,7 +7,10 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,13 +26,14 @@ import static mini.ClientMain.connectToServer;
 
 public class Square extends ClientMain {
     public static final String WRITE_OPCODE = "write ";
+    private static final String[] TABLE_HEADER={"Name ","Size ","Last Modified "};
     FileDrop fileDrop;
     FileDrop.Listener fileDropListener;
     private JPanel back;
     private JTable file_table;
+    private JScrollPane scrollPane;
 
     public Square() {
-
         GUI_connectToServer("127.0.0.1"); //TODO: change IP .
         fileDropListener = new FileDrop.Listener() {
             @Override
@@ -42,7 +46,8 @@ public class Square extends ClientMain {
             }
         };
         fileDrop =new FileDrop(back,fileDropListener);
-        updateFileTable(file_table);
+        file_table = updateFileTable();
+
 
     }
 
@@ -64,7 +69,8 @@ public class Square extends ClientMain {
         }
         if (client.isConnected()) {
             LoginRegister loginRegister = new LoginRegister();
-            loginRegister.setSize(600,400);
+            loginRegister.setSize(500,300);
+            loginRegister.setResizable(false);
             loginRegister.setVisible(true);
             if(!loginRegister.isSuccessful())
                 System.exit(0);
@@ -72,19 +78,30 @@ public class Square extends ClientMain {
     }
 
     private void createUIComponents() {
-        // TODO: place custom component creation code here
+        //create the JScrollPane
+        scrollPane=new JScrollPane(file_table);
     }
-
     /**
      * Update the file JList according to the server's contents.
-     * @param table
      */
-    private void updateFileTable(JTable table){
+    private JTable updateFileTable(){
+        JTable table;
+        //list of file names
         ArrayList<String> fileNames = ClientHandler.handleListCommand();
-
-//        file_table.setListData(fileNames.toArray());
-//        file_table.setVisibleRowCount(10);
-
+        String [][] tableData = new String[fileNames.size()][TABLE_HEADER.length];
+        DefaultTableModel model=new FileTableModel(fileNames.size(),TABLE_HEADER.length);
+        int row = 0;
+        for(String filename:fileNames){
+            //get meta-data for the file
+            FileMetaData meta=ClientHandler.handleMeta(("meta "+filename).split(" "));
+            tableData[row] = meta.toMinimalArray();
+            row++;
+        }
+        //set the table model
+        model.setDataVector(tableData,TABLE_HEADER);
+        table = new JTable(model);
+        scrollPane.setViewportView(table);
+        return table;
     }
 
 
