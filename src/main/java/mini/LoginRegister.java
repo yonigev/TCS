@@ -19,17 +19,16 @@ public class LoginRegister extends JDialog {
     private JRadioButton loginSelection;
     private JRadioButton registerSelection;
     private ButtonGroup  group;
-    private FTPClient client;
+    private boolean login_successful = false;
+    //private JPanel parent_panel;
 
     public LoginRegister() {
         setContentPane(contentPane);
         setModal(true);
-
+        //this.parent_panel=panel;
         group=new ButtonGroup();
         group.add(loginSelection);
         group.add(registerSelection);
-
-
 
         getRootPane().setDefaultButton(buttonOK);
 
@@ -47,7 +46,7 @@ public class LoginRegister extends JDialog {
         });
 
         // call onCancel() when cross is clicked
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
                 onCancel();
@@ -88,18 +87,21 @@ public class LoginRegister extends JDialog {
             success = Square.GUI_loginExistingAccount(Square.client,username,password);
         }
 
-        if(success && loginSelection.isSelected())
+        if(success && loginSelection.isSelected()) {
+            this.login_successful=true;
             dispose();
+        }
     }
 
     private void onCancel() {
-        // add your code here if necessary
         dispose();
     }
 
 
 
-
+    public boolean isSuccessful(){
+        return this.login_successful;
+    }
     public static void main(String[] args) {
         LoginRegister dialog = new LoginRegister();
         dialog.pack();

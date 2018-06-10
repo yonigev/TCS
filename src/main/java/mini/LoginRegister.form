@@ -107,6 +107,8 @@
               </grid>
             </constraints>
             <properties>
+              <editable value="false"/>
+              <enabled value="false"/>
               <font size="20"/>
               <text value="Please Enter Username and Password"/>
             </properties>

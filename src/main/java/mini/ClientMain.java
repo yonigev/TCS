@@ -11,6 +11,7 @@ import java.util.Scanner;
 import java.util.logging.Logger;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.*;
 
 public class ClientMain {
     protected static String REGISTER_COMMAND = "USER !REGISTER!";
@@ -20,6 +21,7 @@ public class ClientMain {
     protected static final String USERNAME_PROMPT = "Enter your Username ";
     protected static final String PASSWORD_PROMPT = "Enter your Password ";
     protected static final String CONNECTION_ERROR = "Error! cannot connect to server ";
+    protected static final String FS_CHANGED_ERROR = "Attention: Some files have changed! ";
 
     protected static final int REGISTRATION_SUCCESS = 601;
 
@@ -29,27 +31,23 @@ public class ClientMain {
     protected static byte[] key1ForEncryption;
     protected static byte[] key2ForAuthen;
     protected static String key3ForPassword;
-
+    protected static FTPClient  client = new FTPClient();
     protected static final Logger logger = Logger.getLogger("client_logger");
-
-
-
     public static void main(String[] args) {
-        FTPClient client = connectToServer("127.0.0.1"); //TODO: change IP .
-        if (client != null) {
-            ClientHandler handler = new ClientHandler(client,key1ForEncryption,key2ForAuthen);
-            handler.handleConnection();
+        connectToServer("127.0.0.1"); //TODO: change IP .
+        try {
+            client.setFileType(FTPClient.BINARY_FILE_TYPE);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        else
-            logger.info("Error:: client got null , can't handle");
-    }
+        ClientHandler.handleConnection();
 
+    }
     /**
      * Connect and login to the FTP Server. (register to server if required.
      * @return the FTPClient
      */
-    protected static FTPClient connectToServer(String serverAddress) {
-        FTPClient client = new FTPClient();
+    protected static void connectToServer(String serverAddress) {
         try {
             System.out.println("CONNECTING....");
             client.connect(serverAddress, 44444);
@@ -70,16 +68,12 @@ public class ClientMain {
                         continue;
                     while (!loginExistingAccount(client, scanner)) ;//try logging in until successful
                 }
-                return client;
             }
-        } else {
+        } else
             System.out.println(CONNECTION_ERROR);
-            return null;
-        }
+
 
     }
-
-
     /**
      * Send the server a REGISTER USER command
      *
@@ -111,7 +105,6 @@ public class ClientMain {
             return false;
         }
     }
-
     /**
      * Send the server a REGISTER USER command
      *
@@ -137,15 +130,16 @@ public class ClientMain {
             return false;
         }
     }
-
     public static boolean GUI_loginExistingAccount(FTPClient client, String username, String password) {
         deriveKeys(password);
-        if(!ClientHandler.authenticateMFileData()) {
-            System.out.println("Management File Damaged");
-            return false;
-        }
         try {
             boolean success_login = client.login(username, key3ForPassword);
+            if(success_login){
+                if(!ClientHandler.authenticateMFileData()) {
+                    System.out.println("Management File Damaged");
+                    JOptionPane.showMessageDialog(null,FS_CHANGED_ERROR);
+                }
+            }
             System.out.println(client.getReplyString());
             return success_login;
         } catch (IOException e) {
@@ -155,7 +149,6 @@ public class ClientMain {
 
 
     }
-
     /**
      * Login to an Existing account. prompt the user for a Username and Password
      *
@@ -175,12 +168,16 @@ public class ClientMain {
             System.out.println(ILLEGAL_INPUT);
         }
         deriveKeys(password);
-        if(!ClientHandler.authenticateMFileData()) {
-            System.out.println("Management File Damaged");
-            return false;
-        }
+
         try {
             boolean success = client.login(username, key3ForPassword);
+
+            if(success){
+                if(!ClientHandler.authenticateMFileData()) {
+                    System.out.println("Management File Damaged");
+                    return false;
+                }
+            }
             System.out.println(client.getReplyString());
             return success;
         } catch (IOException e) {
@@ -188,7 +185,6 @@ public class ClientMain {
             return false;
         }
     }
-
     /**
      * Setting up all 3 keys
      * @param password
@@ -198,5 +194,4 @@ public class ClientMain {
         key2ForAuthen = DigestUtils.sha256(password + PASSWORD_SUFFIX_AUTHENTICATION);
         key3ForPassword = DigestUtils.sha256Hex(password + PASSWORD_SUFFIX_PASSWORD);
     }
-
 }
