@@ -458,8 +458,33 @@ public class ClientHandler {
         return false;
     }
 
+
+    /**
+     * Get metadata of ALL files on server and return a byte array of this data.
+     * TODO: check order of returned FTPFiles.
+     * @return
+     */
     private static byte[] getCurrentMetaData() {
-        //TODO HERE
+        try {
+            //list all files
+            FTPFile[] files = client.listFiles();
+            if(files != null){
+                StringBuilder stringBuilder=new StringBuilder();
+                for(FTPFile f: files){
+                    //append file name
+                    stringBuilder.append(f.getName()+",");
+                    //append file size
+                    stringBuilder.append(Long.toString(f.getSize())+",");
+                    //append file modification date!
+                    stringBuilder.append(Long.toString(f.getTimestamp().getTimeInMillis()));
+                    //newline
+                    stringBuilder.append('\n');
+                }
+                return stringBuilder.toString().getBytes();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
