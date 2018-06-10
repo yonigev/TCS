@@ -61,6 +61,7 @@ public class ClientHandler {
                         break;
                     case "exit":
                         try {
+                            System.out.println("Exiting ...");
                             ClientMain.client.logout();
                             ClientMain.client.disconnect();
 
@@ -124,7 +125,7 @@ public class ClientHandler {
 
     }
 
-    private static int handleRead(String[] command) {
+    private static void handleRead(String[] command) {
         for (int i = 1; i < command.length; i++) {
             String name = command[i];
             File file = new File(name);
@@ -132,16 +133,16 @@ public class ClientHandler {
             try {
                 byte[] originFile;
                 if ((originFile = readFileToRAM(name)) == null)
-                    return -1;
+                    return ; //TODO: Some kind of error
                 FileUtils.writeByteArrayToFile(file, originFile); // writing byte array to file
                 System.out.println(ClientMain.client.getReplyString());
-                return ClientMain.client.getReply();
+                return;
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        return 0;
+        return;
     }
 
 
@@ -226,7 +227,7 @@ public class ClientHandler {
                         System.out.println(ClientMain.client.getReplyString());
                     }
                 } else {
-                    ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
+                    if(ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting))
                     System.out.println(ClientMain.client.getReplyString());
                 }
                 readyForWriting.close();
