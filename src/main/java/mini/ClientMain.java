@@ -33,6 +33,9 @@ public class ClientMain {
     protected static String key3ForPassword;
     protected static FTPClient  client = new FTPClient();
     protected static final Logger logger = Logger.getLogger("client_logger");
+    protected static boolean justRegistered = false;            //indicates if its the first time LOGIN
+
+
     public static void main(String[] args) {
         connectToServer("127.0.0.1"); //TODO: change IP .
         try {
@@ -68,6 +71,7 @@ public class ClientMain {
                         continue;
                     while (!loginExistingAccount(client, scanner)) ;//try logging in until successful
                 }
+                return;
             }
         } else
             System.out.println(CONNECTION_ERROR);
@@ -97,7 +101,7 @@ public class ClientMain {
             if (reply != REGISTRATION_SUCCESS) {                                //if NOT successful
                 return false;
             } else{
-                ClientHandler.writeMFileOnServer();
+                justRegistered = true;
                 return true;
             }
         } catch (IOException e) {
@@ -171,14 +175,16 @@ public class ClientMain {
 
         try {
             boolean success = client.login(username, key3ForPassword);
-            
+            System.out.println(client.getReplyString());
+
             if(success){
-                if(!ClientHandler.authenticateMFileData()) {
-                    System.out.println("Management File Damaged");
-                    return false;
+                if(justRegistered)
+                    ClientHandler.writeMFileOnServer();
+                else if(!ClientHandler.authenticateMFileData()) {
+                        System.out.println("Management File Damaged");
+                        return false;
                 }
             }
-            System.out.println(client.getReplyString());
             return success;
         } catch (IOException e) {
             e.printStackTrace();

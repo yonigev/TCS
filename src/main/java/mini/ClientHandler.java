@@ -277,6 +277,8 @@ public class ClientHandler {
             if (names != null && names.length > 0) {
                 for (String fileName : names) {
                     String decName = decryptAndAuthName(fileName);
+                    if(decName!=null && decName.equals(MFILE_NAME))
+                        continue;
                     decNames.add(decName);
                     if (decName == null)
                         return null;
@@ -371,6 +373,7 @@ public class ClientHandler {
             byte[] tag = new byte[32];
             System.arraycopy(data, 0, message, 0, messageLength);
             System.arraycopy(data, messageLength, tag, 0, tag.length);
+            byte[] newTag=mac.doFinal(message);
             if (Arrays.equals(mac.doFinal(message), tag))
                 return message;
         } catch (Exception e) {
@@ -433,7 +436,6 @@ public class ClientHandler {
      * to the metadata of all the files on the server
      */
 
-    //FFTUUS4QVFCIVUS7NOWUCLLM7WGKNDWFD6S5GAJC6XSTQ3EXBEUXVZGYCILYELPYZ4PSRXN4WXY74===
 
     protected static void writeMFileOnServer() {
         try {
@@ -483,6 +485,8 @@ public class ClientHandler {
             if(files != null){
                 StringBuilder stringBuilder=new StringBuilder();
                 for(FTPFile f: files){
+                    if(f.getName().equals(base32.encodeAsString(encryptAndTagName(MFILE_NAME))))  //ignore the management file
+                        continue;
                     //append file name
                     stringBuilder.append(f.getName()+",");
                     //append file size
