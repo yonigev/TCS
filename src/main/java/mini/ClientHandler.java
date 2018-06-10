@@ -18,14 +18,14 @@ import java.util.logging.SimpleFormatter;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.net.ftp.FTPFile;
-
+import org.apache.commons.codec.binary.Base32;
 public class ClientHandler {
     private static final String FILE_DELETION_SUCCESS = "File Successfully Deleted : ";
     private static final String FILE_DELETION_FAILURE = "File Could not be Deleted : ";
     private static final String FILE_OVERWRITE_PROMPT = "File already exists. overwrite? y/n";
     private static final String FILE_RENAME_ILLEGAL = "Illegal Number of Arguments ";
     private static final String MFILE_NAME = "nothing_important_here";
-
+    private static  Base32 base32 = new Base32();
 
 
     /**
@@ -94,7 +94,7 @@ public class ClientHandler {
 
                 byte[] originEncTag = encryptAndTagName(command[1]);     //original file name - encrypted and tagged
                 byte[] changeToEncTag = encryptAndTagName(command[2]);   //new file name -  same
-                ClientMain.client.rename(Arrays.toString(originEncTag), Arrays.toString(changeToEncTag));
+                ClientMain.client.rename(base32.encodeAsString(originEncTag), base32.encodeAsString(changeToEncTag));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -108,7 +108,7 @@ public class ClientHandler {
             if (name.equals(command[0])) //skip command name
                 continue;
             try {
-                if (ClientMain.client.deleteFile(Arrays.toString(encryptAndTagName(name)))) {
+                if (ClientMain.client.deleteFile(base32.encodeAsString(encryptAndTagName(name)))) {
                     System.out.print(FILE_DELETION_SUCCESS);
                     System.out.println(name);
                 } else {
@@ -161,7 +161,6 @@ public class ClientHandler {
         System.arraycopy(encryptedBytesToWrite, 0, bytesToWrite, 0, encryptedBytesToWrite.length);
         System.arraycopy(tag, 0, bytesToWrite, encryptedBytesToWrite.length, tag.length);
         fis.close();
-
         return new ByteArrayInputStream(bytesToWrite);
     }
 
@@ -189,11 +188,7 @@ public class ClientHandler {
      * @return
      */
     private static String decryptAndAuthName(String encName) {
-        String[] byteValues = encName.substring(1, encName.length() - 1).split(",");
-        byte[] encAuthNameBytes = new byte[byteValues.length];
-        for (int i = 0, len = encAuthNameBytes.length; i < len; i++) {
-            encAuthNameBytes[i] = Byte.parseByte(byteValues[i].trim());
-        }
+        byte[] encAuthNameBytes =base32.decode(encName);
         // byte[] encAuthNameBytes=encName.getBytes();
         byte[] encNameBytes = authenticateData(encAuthNameBytes, ClientMain.key2ForAuthen);
         if (encNameBytes == null) {
@@ -223,15 +218,15 @@ public class ClientHandler {
                 byte[] encAuthFileName = encryptAndTagName(getNameFromPath(path));
                 InputStream readyForWriting = encryptAndTagFile(fis);
                 //if file exists
-                if (ArrayUtils.contains(ClientMain.client.listNames(), Arrays.toString(encAuthFileName))) {
+                if (ArrayUtils.contains(ClientMain.client.listNames(), base32.encodeAsString(encAuthFileName))) {
                     //ask user to overwrite
                     if (promptOverWrite(getNameFromPath(filePath))) {
-                        ClientMain.client.storeFile(Arrays.toString(encAuthFileName), readyForWriting);
+                        ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
 
                         System.out.println(ClientMain.client.getReplyString());
                     }
                 } else {
-                    ClientMain.client.storeFile(Arrays.toString(encAuthFileName), readyForWriting);
+                    ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
                     System.out.println(ClientMain.client.getReplyString());
                 }
                 readyForWriting.close();
@@ -398,7 +393,7 @@ public class ClientHandler {
         String filename = command[1];
         try {
             FTPFile[] allFiles = ClientMain.client.listFiles();
-            String encFilename = Arrays.toString(encryptAndTagName(filename));  //the encrypted file name
+            String encFilename = base32.encodeAsString(encryptAndTagName(filename));  //the encrypted file name
             for (FTPFile file : allFiles) {
                 if (file.getName().equals(encFilename)) {
                     //create the File MetaData Object  to Return;
@@ -437,13 +432,19 @@ public class ClientHandler {
      * Write the Management File on server - the file is built according
      * to the metadata of all the files on the server
      */
+
+    //FFTUUS4QVFCIVUS7NOWUCLLM7WGKNDWFD6S5GAJC6XSTQ3EXBEUXVZGYCILYELPYZ4PSRXN4WXY74===
+
     protected static void writeMFileOnServer() {
         try {
             byte[] currentMetaData = getCurrentMetaData();
+            //System.out.println("meta data byte array length:  "+currentMetaData.length);
             byte[] encAuthFileName = encryptAndTagName(MFILE_NAME);
             InputStream in = new ByteArrayInputStream(currentMetaData);
             InputStream readyForWriting = encryptAndTagFile(in);
-            ClientMain.client.storeFile(Arrays.toString(encAuthFileName), readyForWriting);
+            //System.out.println("the bytes we store in server as string :" + base32.encodeAsString(IOUtils.toByteArray(readyForWriting)));
+            ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
+            readyForWriting.close();
             System.out.println(ClientMain.client.getReplyString());
         } catch (IOException e) {
             e.printStackTrace();
@@ -508,7 +509,7 @@ public class ClientHandler {
      */
     private static byte[] readFileToRAM(String fileName) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ClientMain.client.retrieveFile(Arrays.toString(encryptAndTagName(fileName)), out);
+        ClientMain.client.retrieveFile(base32.encodeAsString(encryptAndTagName(fileName)), out);
         byte[] bytesRead = out.toByteArray();
         out.close();
         byte[] encryptedFile = authenticateData(bytesRead, ClientMain.key2ForAuthen);

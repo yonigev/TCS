@@ -2,7 +2,6 @@
   <library name="Maven: commons-codec:commons-codec:1.10">
     <CLASSES>
       <root url="jar://$MAVEN_REPOSITORY$/commons-codec/commons-codec/1.10/commons-codec-1.10.jar!/" />
-      <root url="jar://$PROJECT_DIR$/filedrop.jar!/" />
     </CLASSES>
     <JAVADOC>
       <root url="jar://$MAVEN_REPOSITORY$/commons-codec/commons-codec/1.10/commons-codec-1.10-javadoc.jar!/" />
