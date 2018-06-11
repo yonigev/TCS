@@ -1,6 +1,7 @@
 package mini;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
 import java.security.Key;
@@ -38,11 +39,6 @@ public class ClientMain {
 
     public static void main(String[] args) {
         connectToServer("127.0.0.1"); //TODO: change IP .
-        try {
-            client.setFileType(FTPClient.BINARY_FILE_TYPE);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         ClientHandler.handleConnection();
 
     }
@@ -125,7 +121,7 @@ public class ClientMain {
             if (reply != REGISTRATION_SUCCESS) {                                //if NOT successful
                 return false;
             } else {
-                ClientHandler.writeMFileOnServer();
+                justRegistered=true;
                 return true;
             }
 
@@ -138,6 +134,7 @@ public class ClientMain {
         deriveKeys(password);
         try {
             boolean success_login = client.login(username, key3ForPassword);
+            client.setFileType(FTP.BINARY_FILE_TYPE);
             if(success_login){
                 if(!ClientHandler.authenticateMFileData()) {
                     System.out.println("Management File Damaged");
@@ -175,6 +172,7 @@ public class ClientMain {
 
         try {
             boolean success = client.login(username, key3ForPassword);
+            client.setFileType(FTP.BINARY_FILE_TYPE);
             System.out.println(client.getReplyString());
 
             if(success){

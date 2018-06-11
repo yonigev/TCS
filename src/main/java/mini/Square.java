@@ -1,6 +1,7 @@
 package mini;
 
 import net.iharder.dnd.FileDrop;
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
 import javax.swing.*;
@@ -15,9 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
-
-import static mini.ClientMain.connectToServer;
-
 
 /**
  * Connect and login to the FTP Server. (register to server if required.

@@ -448,14 +448,17 @@ public class ClientHandler {
             if(!ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting)){
                 System.out.println("Error storing new MFile!");
             }
+            /////////////////////////////////////////TODO::
+            System.out.println("writeMFileOnServer:: bytesWrite are : " + Arrays.toString(IOUtils.toByteArray(encryptAndTagFile(new ByteArrayInputStream(currentMetaData)))));
+            /////////////////////////////////////////TODO::
+
             readyForWriting.close();
             System.out.println(ClientMain.client.getReplyString());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-    /**
+  /**
      * Make sure the Management file on server is up-to-date
      * according to the Server's contents
      * @return
@@ -529,6 +532,7 @@ public class ClientHandler {
             System.out.println("readFileToRam with  -"+fileName+" has failed");
         }
         byte[] bytesRead = out.toByteArray();
+        System.out.println("readFileToRAM:: bytesRead are : " + Arrays.toString(bytesRead) );
         out.close();
         byte[] encryptedFile = authenticateData(bytesRead, ClientMain.key2ForAuthen);
         if (encryptedFile == null) {
