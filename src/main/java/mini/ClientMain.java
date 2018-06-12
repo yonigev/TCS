@@ -1,6 +1,7 @@
 package mini;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
 import java.security.Key;
@@ -139,6 +140,7 @@ public class ClientMain {
         try {
             boolean success_login = client.login(username, key3ForPassword);
             if(success_login){
+                client.setFileType(FTP.BINARY_FILE_TYPE);
                 if(firstLogin){
                     ClientHandler.writeMFileOnServer();
                 }
@@ -181,6 +183,7 @@ public class ClientMain {
             System.out.println(client.getReplyString());
 
             if(success){
+                client.setFileType(FTP.BINARY_FILE_TYPE);
                 if(justRegistered) {
                     System.out.println("Writing Management file for first time");
                     ClientHandler.writeMFileOnServer();

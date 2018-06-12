@@ -445,29 +445,22 @@ public class ClientHandler {
     protected static void writeMFileOnServer() {
 
         try {
-            if(ClientMain.client.storeFile(MFILE_NAME,new ByteArrayInputStream(getCurrentMetaData()) ))
-                System.out.println("STORED STUPID FILE");
-
+            handleDelete(("delete "+MFILE_NAME).split(" "));
+            System.out.println("Writing a new MFile on server!");
+            byte[] currentMetaData = getCurrentMetaData();
+            //System.out.println("meta data byte array length:  "+currentMetaData.length);
+            byte[] encAuthFileName = encryptAndTagName(MFILE_NAME);
+            InputStream in = new ByteArrayInputStream(currentMetaData);
+            InputStream readyForWriting = encryptAndTagFile(in);
+            //System.out.println("the bytes we store in server as string :" + base32.encodeAsString(IOUtils.toByteArray(readyForWriting)));
+            if(!ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting)){
+                System.out.println("Error storing new MFile!");
+            }
+            readyForWriting.close();
+            System.out.println(ClientMain.client.getReplyString());
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        try {
-//            handleDelete(("delete "+MFILE_NAME).split(" "));
-//            System.out.println("Writing a new MFile on server!");
-//            byte[] currentMetaData = getCurrentMetaData();
-//            //System.out.println("meta data byte array length:  "+currentMetaData.length);
-//            byte[] encAuthFileName = encryptAndTagName(MFILE_NAME);
-//            InputStream in = new ByteArrayInputStream(currentMetaData);
-//            InputStream readyForWriting = encryptAndTagFile(in);
-//            //System.out.println("the bytes we store in server as string :" + base32.encodeAsString(IOUtils.toByteArray(readyForWriting)));
-//            if(!ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting)){
-//                System.out.println("Error storing new MFile!");
-//            }
-//            readyForWriting.close();
-//            System.out.println(ClientMain.client.getReplyString());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     /**
@@ -477,39 +470,21 @@ public class ClientHandler {
      */
     protected static boolean authenticateMFileData() {
 
-
-        byte[] currentMeta=getCurrentMetaData();
-        ByteArrayOutputStream out=new ByteArrayOutputStream();
         try {
-            ClientMain.client.retrieveFile(MFILE_NAME,out);
-            byte[] arr=out.toByteArray();
-
-            System.out.println("Comparing!: ");
-            System.out.println(Arrays.toString(currentMeta));
-            System.out.println("and: ");
-            System.out.println(Arrays.toString(arr));
-
-            return Arrays.equals(arr,currentMeta);
-
+            byte[] currentMetaData = getCurrentMetaData();
+            System.out.println("Trying to Authenticate MFile");
+            //READ the file byte data to Client RAM (authenticated and decrypted)
+            byte[] managementData = readFileToRAM(MFILE_NAME);
+            if (managementData == null) {
+                System.out.println("authenticateMFileData   -   readFileToRam is NULL!!");
+                return false;
+            }
+            return hashCompareByteArrays(currentMetaData,managementData);
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        try {
-//            byte[] currentMetaData = getCurrentMetaData();
-//            System.out.println("Trying to Authenticate MFile");
-//            //READ the file byte data to Client RAM (authenticated and decrypted)
-//            byte[] managementData = readFileToRAM(MFILE_NAME);
-//            if (managementData == null) {
-//                System.out.println("authenticateMFileData   -   readFileToRam is NULL!!");
-//                return false;
-//            }
-//            return hashCompareByteArrays(currentMetaData,managementData);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return false;
-        return true;
-    }
+        return false;
+}
 
 
     /**
