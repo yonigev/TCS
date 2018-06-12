@@ -10,6 +10,8 @@ import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Key;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -30,6 +32,33 @@ public class ClientHandler {
     private static final String MFILE_NAME = "nothing_important_here";
     private static  Base32 base32 = new Base32();
 
+    /**
+     * Split an input of  ' write "path 1" "path 2" ...
+     * or split spaces
+     * @param command
+     * @return
+     */
+    public static String[] parseCommand(String command){
+        System.out.println("Parsing command  - "+command);
+        String[] splitCommand = command.split(" ");
+        //if more then 1, paths should have "" around them
+        if(splitCommand[0].equals("write") && splitCommand.length > 2){
+            // write "pa th1" "pat h2" >>
+            String[] paths = command.substring(6).split("\"");
+            ArrayList<String> pathsArrayList=new ArrayList<>(Arrays.asList(paths));
+            while(pathsArrayList.contains(" ")) pathsArrayList.remove(" ");
+            pathsArrayList.add(0,"write");
+            System.out.println("returning - " +Arrays.toString(pathsArrayList.toArray())); //TODO: FIX PARSING AND APPLY
+            return (String[]) pathsArrayList.toArray();
+            //remove space strings
+        }
+        else {
+            System.out.println("returning -  "+Arrays.toString(command.split(" ")));
+            return command.split(" ");
+        }
+
+
+    }
 
     /**
      * Handles the connection to the server
@@ -42,7 +71,7 @@ public class ClientHandler {
         while (client.isConnected()) {
             Scanner sc = new Scanner(System.in);
             input = sc.nextLine();
-            command = input.split(" ");
+            command = parseCommand(input);
             if (command.length > 0) {
                 switch (command[0]) {
                     case "ls":

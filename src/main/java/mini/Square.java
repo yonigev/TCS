@@ -4,6 +4,8 @@ import net.iharder.dnd.FileDrop;
 import org.apache.commons.net.ftp.FTPClient;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -19,7 +21,7 @@ import static com.sun.deploy.uitoolkit.ToolkitStore.dispose;
  * @return the FTPClient
  */
 
-public class Square extends ClientMain {
+public class Square extends ClientMain  {
     public static final String WRITE_OPCODE = "write ";
     private static final String[] TABLE_HEADER={"Name ","Size ","Last Modified "};
     FileDrop fileDrop;
@@ -30,9 +32,11 @@ public class Square extends ClientMain {
     private JButton buttonDelete;
     private JButton buttonExit;
     private static JFrame mainFrame;
+    private DeleteFileActionListener deleteFileActionListener;
 
     public Square() {
         GUI_connectToServer("127.0.0.1"); //TODO: change IP .
+        deleteFileActionListener=new DeleteFileActionListener();
         fileDropListener = new FileDrop.Listener() {
             @Override
             public void filesDropped(File[] files) {
@@ -45,19 +49,14 @@ public class Square extends ClientMain {
             }
         };
         fileDrop =new FileDrop(back,fileDropListener);
-        file_table = updateFileTable();
+        updateFileTable();
         buttonExit.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 onExit();
             }
         });
-        buttonDelete.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                deleteMarkedFile();
-            }
-        });
+        buttonDelete.addActionListener(deleteFileActionListener);
 
     }
 
@@ -97,8 +96,8 @@ public class Square extends ClientMain {
     /**
      * Update the file JList according to the server's contents.
      */
-    private JTable updateFileTable(){
-        JTable table;
+    private void updateFileTable(){
+
         //list of file names
         ArrayList<String> fileNames = ClientHandler.handleListCommand();
         String [][] tableData = new String[fileNames.size()][TABLE_HEADER.length];
@@ -112,9 +111,10 @@ public class Square extends ClientMain {
         }
         //set the table model
         model.setDataVector(tableData,TABLE_HEADER);
-        table = new JTable(model);
-        scrollPane.setViewportView(table);
-        return table;
+        file_table.setModel(model);
+        //table = new JTable(model);
+        scrollPane.setViewportView(file_table);
+        //return table;
     }
 
     /**
@@ -122,6 +122,7 @@ public class Square extends ClientMain {
      */
     private void deleteMarkedFile(){
         int selectedRow=file_table.getSelectedRow();
+
         if(selectedRow!=-1 && JOptionPane.showConfirmDialog(null,"Are you sure you want to delete?") == JOptionPane.YES_OPTION){
             String filename = (String) file_table.getValueAt(selectedRow,0);
             boolean success = ClientHandler.handleDelete(("delete "+filename).split(" "));
@@ -135,8 +136,19 @@ public class Square extends ClientMain {
      * Dispose and exit
      */
     private void onExit(){
+        // TODO: writeMFileOnServer NOT HERE! in case of exiting the client illegaly, the file won't update.
         ClientHandler.writeMFileOnServer();
         mainFrame.dispose();
     }
 
+    /**
+     * A listener that updates the table on file deletion
+     */
+   public class DeleteFileActionListener implements ActionListener{
+
+       @Override
+       public void actionPerformed(ActionEvent e) {
+           deleteMarkedFile();
+       }
+   }
 }
