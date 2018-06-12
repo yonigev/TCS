@@ -125,7 +125,7 @@ public class ClientMain {
             if (reply != REGISTRATION_SUCCESS) {                                //if NOT successful
                 return false;
             } else {
-                ClientHandler.writeMFileOnServer();
+                justRegistered = true;
                 return true;
             }
 
@@ -134,12 +134,15 @@ public class ClientMain {
             return false;
         }
     }
-    public static boolean GUI_loginExistingAccount(FTPClient client, String username, String password) {
+    public static boolean GUI_loginExistingAccount(FTPClient client, String username, String password,boolean firstLogin) {
         deriveKeys(password);
         try {
             boolean success_login = client.login(username, key3ForPassword);
             if(success_login){
-                if(!ClientHandler.authenticateMFileData()) {
+                if(firstLogin){
+                    ClientHandler.writeMFileOnServer();
+                }
+                else if(!ClientHandler.authenticateMFileData()) {
                     System.out.println("Management File Damaged");
                     JOptionPane.showMessageDialog(null,FS_CHANGED_ERROR);
                 }

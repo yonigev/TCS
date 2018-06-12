@@ -11,6 +11,8 @@ public class FileTableModel extends DefaultTableModel {
 
     @Override
     public boolean isCellEditable(int row, int column) {
+        if(column == 0)
+            return true;
         return false;
     }
 }
