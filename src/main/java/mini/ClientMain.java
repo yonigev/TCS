@@ -136,9 +136,13 @@ public class ClientMain {
             boolean success_login = client.login(username, key3ForPassword);
             client.setFileType(FTP.BINARY_FILE_TYPE);
             if(success_login){
-                if(!ClientHandler.authenticateMFileData()) {
+                if(justRegistered) {
+                    System.out.println("Writing Management file for first time");
+                    ClientHandler.writeMFileOnServer();
+                }
+                else if(!ClientHandler.authenticateMFileData()) {
                     System.out.println("Management File Damaged");
-                    JOptionPane.showMessageDialog(null,FS_CHANGED_ERROR);
+                    return false;
                 }
             }
             System.out.println(client.getReplyString());
