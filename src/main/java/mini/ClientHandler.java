@@ -28,7 +28,7 @@ public class ClientHandler {
     private static final String FILE_OVERWRITE_PROMPT = "File already exists. overwrite? y/n";
     private static final String FILE_RENAME_ILLEGAL = "Illegal Number of Arguments ";
     private static final String MFILE_NAME = "nothing_important_here";
-    private static  Base32 base32 = new Base32();
+    protected static  Base32 base32 = new Base32();
 
 
     /**
@@ -96,7 +96,7 @@ public class ClientHandler {
                 byte[] originEncTag = encryptAndTagName(command[1]);     //original file name - encrypted and tagged
                 byte[] changeToEncTag = encryptAndTagName(command[2]);   //new file name -  same
                 client.rename(base32.encodeAsString(originEncTag), base32.encodeAsString(changeToEncTag));
-                //writeMFileOnServer();
+                writeMFileOnServer();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -113,7 +113,7 @@ public class ClientHandler {
                 if (client.deleteFile(base32.encodeAsString(encryptAndTagName(name)))) {
                     System.out.print(FILE_DELETION_SUCCESS);
                     System.out.println(name);
-                    //writeMFileOnServer();
+                    writeMFileOnServer();
                     return true;
                 } else {
                     System.out.print(FILE_DELETION_FAILURE);
@@ -127,7 +127,7 @@ public class ClientHandler {
         return false;
     }
 
-    private static void handleRead(String[] command) {
+    protected static void handleRead(String[] command) {
         for (int i = 1; i < command.length; i++) {
             String name = command[i];
             File file = new File(name);
@@ -174,7 +174,7 @@ public class ClientHandler {
      * @return
      * @throws IOException
      */
-    private static byte[] encryptAndTagName(String originFileName) throws IOException {
+    protected static byte[] encryptAndTagName(String originFileName) throws IOException {
         byte[] originBytes = originFileName.getBytes();
         byte[] encryptedNameBytes = encryptData(originBytes, ClientMain.key1ForEncryption);
         byte[] tag = getAuthenticationTag(encryptedNameBytes, ClientMain.key2ForAuthen);
@@ -225,12 +225,12 @@ public class ClientHandler {
                     //ask user to overwrite
                     if (promptOverWrite(getNameFromPath(filePath))) {
                         client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
-                        //writeMFileOnServer();
+                        writeMFileOnServer();
                         System.out.println(client.getReplyString());
                     }
                 } else {
                     client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
-                    //writeMFileOnServer();
+                    writeMFileOnServer();
                     System.out.println(client.getReplyString());
                 }
                 readyForWriting.close();
@@ -526,7 +526,7 @@ public class ClientHandler {
      * @return  byte array of the file, or null when file was tampered with
      * @throws IOException
      */
-    private static byte[] readFileToRAM(String fileName) throws IOException {
+    protected static byte[] readFileToRAM(String fileName) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         if(!client.retrieveFile(base32.encodeAsString(encryptAndTagName(fileName)), out)){
             System.out.println("readFileToRam with  -"+fileName+" has failed");
