@@ -69,7 +69,7 @@ public class LoginRegister extends JDialog {
         boolean success =   false;
         //Login / Register according to selection
         if(loginSelection.isSelected())
-            success = Square.GUI_loginExistingAccount(Square.client,username,password);
+            success = Square.GUI_loginExistingAccount(Square.client,username,password, false);
         else if(registerSelection.isSelected())
             success = Square.GUI_registerNewAccount(username,password,Square.client);
 
@@ -85,7 +85,7 @@ public class LoginRegister extends JDialog {
             loginSelection.setSelected(true);
             registerSelection.setSelected(false);
             JOptionPane.showMessageDialog(null,REGISTER_SUCCESS);
-            success = Square.GUI_loginExistingAccount(Square.client,username,password);
+            success = Square.GUI_loginExistingAccount(Square.client,username,password, true);
         }
 
         if(success && loginSelection.isSelected()) {

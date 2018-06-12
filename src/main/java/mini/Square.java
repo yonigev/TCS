@@ -5,17 +5,15 @@ import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumn;
-import javax.swing.table.TableModel;
-import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Scanner;
+
+import static com.sun.deploy.uitoolkit.ToolkitStore.dispose;
+
 
 /**
  * Connect and login to the FTP Server. (register to server if required.
@@ -30,6 +28,9 @@ public class Square extends ClientMain {
     private JPanel back;
     private JTable file_table;
     private JScrollPane scrollPane;
+    private JButton buttonDelete;
+    private JButton buttonExit;
+    private static JFrame mainFrame;
 
     public Square() {
         GUI_connectToServer("127.0.0.1"); //TODO: change IP .
@@ -39,18 +40,31 @@ public class Square extends ClientMain {
                 for (File f : files) {
                     if (client.isConnected()) {
                         ClientHandler.handleWrite((WRITE_OPCODE + f.getPath()).split(" "));
+                        updateFileTable();
                     }
                 }
             }
         };
         fileDrop =new FileDrop(back,fileDropListener);
         file_table = updateFileTable();
-
+        buttonExit.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                onExit();
+            }
+        });
+        buttonDelete.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                deleteMarkedFile();
+            }
+        });
 
     }
 
     public static void main(String[] args) {
-        JFrame mainFrame = new JFrame("Square");      //create new JFrame
+
+        mainFrame = new JFrame("Square");      //create new JFrame
 
         mainFrame.setContentPane(new Square().back);    //set "back" as the content
         mainFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -62,10 +76,12 @@ public class Square extends ClientMain {
     protected void GUI_connectToServer(String serverAddress) {
         try {
             client.connect(serverAddress, 44444);
+            client.setFileType(FTPClient.BINARY_FILE_TYPE);
         } catch (IOException e) {
             e.printStackTrace();
         }
         if (client.isConnected()) {
+
             LoginRegister loginRegister = new LoginRegister();
             loginRegister.setSize(500,300);
             loginRegister.setResizable(false);
@@ -102,5 +118,26 @@ public class Square extends ClientMain {
         return table;
     }
 
+    /**
+     * Delete a file marked in the table
+     */
+    private void deleteMarkedFile(){
+        int selectedRow=file_table.getSelectedRow();
+        if(selectedRow!=-1 && JOptionPane.showConfirmDialog(null,"Are you sure you want to delete?") == JOptionPane.YES_OPTION){
+            String filename = (String) file_table.getValueAt(selectedRow,0);
+            boolean success = ClientHandler.handleDelete(("delete "+filename).split(" "));
+            if(success){
+                updateFileTable();
+            }
+        }
+
+    }
+    /**
+     * Dispose and exit
+     */
+    private void onExit(){
+        ClientHandler.writeMFileOnServer();
+        mainFrame.dispose();
+    }
 
 }
