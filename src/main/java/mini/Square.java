@@ -218,7 +218,7 @@ public class Square extends ClientMain {
 
     private class UploadButtonListener implements ActionListener {
 
-        @Override
+         @Override
         public void actionPerformed(ActionEvent e) {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileSelectionMode(JFileChooser.OPEN_DIALOG);
