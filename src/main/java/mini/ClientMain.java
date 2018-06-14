@@ -35,6 +35,7 @@ public class ClientMain {
     protected static FTPClient  client = new FTPClient();
     protected static final Logger logger = Logger.getLogger("client_logger");
     protected static boolean justRegistered = false;            //indicates if its the first time LOGIN
+    protected static boolean GUI_ENABLED = false;
 
 
     public static void main(String[] args) {

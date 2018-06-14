@@ -15,4 +15,14 @@ public class FileTableModel extends DefaultTableModel {
             return true;
         return false;
     }
+
+    @Override
+    public void setValueAt(Object aValue, int row, int column) {
+        Object oldValue=getValueAt(row,column); //keep old value
+
+        //change table value ONLY if possible to change name at server
+        if(ClientHandler.handleRename(ClientHandler.parseCommand("rename " + AuxFunctions.quotify((String) oldValue)+ " "+AuxFunctions.quotify((String) aValue))))
+            super.setValueAt(aValue, row, column);
+
+    }
 }

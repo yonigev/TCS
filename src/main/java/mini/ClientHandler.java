@@ -1,5 +1,6 @@
 package mini;
 
+import com.sun.xml.internal.fastinfoset.util.StringArray;
 import javafx.util.Pair;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -9,7 +10,9 @@ import org.apache.commons.net.ftp.FTPClient;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.*;
 import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -39,27 +42,27 @@ public class ClientHandler {
      * @return
      */
     public static String[] parseCommand(String command){
-        System.out.println("Parsing command  - "+command);
         String[] splitCommand = command.split(" ");
-        //if more then 1, paths should have "" around them
-        if(splitCommand[0].equals("write") && splitCommand.length > 2){
-            // write "pa th1" "pat h2" >>
-            String[] paths = command.substring(6).split("\"");
-            ArrayList<String> pathsArrayList=new ArrayList<>(Arrays.asList(paths));
-            while(pathsArrayList.contains(" ")) pathsArrayList.remove(" ");
-            pathsArrayList.add(0,"write");
-            System.out.println("returning - " +Arrays.toString(pathsArrayList.toArray())); //TODO: FIX PARSING AND APPLY
-            return (String[]) pathsArrayList.toArray();
-            //remove space strings
+        if(handlesAFile(splitCommand[0])){
+            String[] paths = command.split("\"");
+
+            return AuxFunctions.removeSpaces(paths);
         }
         else {
-            System.out.println("returning -  "+Arrays.toString(command.split(" ")));
+            //System.out.println("returning -  "+Arrays.toString(command.split(" ")));
             return command.split(" ");
         }
-
-
     }
 
+
+    /**
+     * Checks if an opcode represents a Command that handles file names (and should be aware of spaces
+     * @param opcode
+     * @return
+     */
+    private static boolean handlesAFile(String opcode){
+        return (opcode.equals("write")|| opcode.equals("meta") || opcode.equals("delete")|| opcode.equals("rename"));
+    }
     /**
      * Handles the connection to the server
      */
@@ -118,19 +121,22 @@ public class ClientHandler {
      *
      * @param command
      */
-    private static void handleRename(String[] command) {
+    protected static boolean handleRename(String[] command) {
+        boolean nameChanged = false;
         if (command.length == 3) {
-            try {
 
+            try {
                 byte[] originEncTag = encryptAndTagName(command[1]);     //original file name - encrypted and tagged
                 byte[] changeToEncTag = encryptAndTagName(command[2]);   //new file name -  same
-                client.rename(base32.encodeAsString(originEncTag), base32.encodeAsString(changeToEncTag));
-                //writeMFileOnServer();
+                nameChanged = client.rename(base32.encodeAsString(originEncTag), base32.encodeAsString(changeToEncTag));
+                if(nameChanged)
+                    writeMFileOnServer();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else
             System.out.println(FILE_RENAME_ILLEGAL);
+        return nameChanged;
     }
 
     protected static boolean handleDelete(String[] command) {
@@ -142,7 +148,7 @@ public class ClientHandler {
                 if (client.deleteFile(base32.encodeAsString(encryptAndTagName(name)))) {
                     System.out.print(FILE_DELETION_SUCCESS);
                     System.out.println(name);
-                    //writeMFileOnServer();
+                    writeMFileOnServer();
                     return true;
                 } else {
                     System.out.print(FILE_DELETION_FAILURE);
@@ -240,7 +246,7 @@ public class ClientHandler {
      */
     protected static void handleWrite(String[] command) {
         for (String filePath : command) {
-            if (ArrayUtils.indexOf(command, filePath) == 0)
+            if (filePath.equals(" ") || ArrayUtils.indexOf(command, filePath) == 0)
                 continue;
             String path = filePath;
 
@@ -253,13 +259,13 @@ public class ClientHandler {
                 if (ArrayUtils.contains(client.listNames(), base32.encodeAsString(encAuthFileName))) {
                     //ask user to overwrite
                     if (promptOverWrite(getNameFromPath(filePath))) {
-                        client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
-                        //writeMFileOnServer();
+                        if(client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting))
+                            writeMFileOnServer();
                         System.out.println(client.getReplyString());
                     }
                 } else {
                     client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting);
-                    //writeMFileOnServer();
+                    writeMFileOnServer();
                     System.out.println(client.getReplyString());
                 }
                 readyForWriting.close();
@@ -278,6 +284,10 @@ public class ClientHandler {
      * @return
      */
     private static boolean promptOverWrite(String name) {
+        if(ClientMain.GUI_ENABLED){
+            if(JOptionPane.showConfirmDialog(null,"Overwrite file "+name+"?") == JOptionPane.YES_OPTION)
+                return true;
+        }
         System.out.print(name + " : ");
         System.out.println(FILE_OVERWRITE_PROMPT);
         Scanner sc = new Scanner(System.in);
@@ -423,10 +433,7 @@ public class ClientHandler {
      * @return
      */
     protected static FileMetaData handleMeta(String[] command) {
-        if (command.length < 2) {
-            System.out.println("Wrong usage of the Meta command. ");
-            return null;
-        }
+
         String filename = command[1];
         try {
             FTPFile[] allFiles = client.listFiles();
@@ -442,7 +449,6 @@ public class ClientHandler {
                     format.setTimeZone(TimeZone.getDefault());
                     String metaData="Name: " + filename + "\n" + "Size: " + size + "\n" + "Last Modified: " + format.format(dateModified.getTime());
                     System.out.println(metaData);
-
                     return metaToReturn;
                 }
             }
@@ -563,7 +569,7 @@ public class ClientHandler {
      * @return  byte array of the file, or null when file was tampered with
      * @throws IOException
      */
-    private static byte[] readFileToRAM(String fileName) throws IOException {
+    protected static byte[] readFileToRAM(String fileName) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         if(!client.retrieveFile(base32.encodeAsString(encryptAndTagName(fileName)), out)){
             System.out.println("readFileToRam with  -"+fileName+" has failed");
