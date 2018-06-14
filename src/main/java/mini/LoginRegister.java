@@ -31,6 +31,7 @@ public class LoginRegister extends JDialog {
         group.add(loginSelection);
         group.add(registerSelection);
         pleaseEnterUsernameAndTextArea.setDisabledTextColor(Color.WHITE);
+        password_field.
 
         getRootPane().setDefaultButton(buttonOK);
 

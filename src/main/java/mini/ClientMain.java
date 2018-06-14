@@ -23,6 +23,8 @@ public class ClientMain {
     protected static final String PASSWORD_PROMPT = "Enter your Password ";
     protected static final String CONNECTION_ERROR = "Error! cannot connect to server ";
     protected static final String FS_CHANGED_ERROR = "Attention: Some files have changed! ";
+    protected static final String FILE_DAMAGED_ERROR = "File has been Damaged! ";
+
 
     protected static final int REGISTRATION_SUCCESS = 601;
 

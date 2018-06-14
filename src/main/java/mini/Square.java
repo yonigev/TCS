@@ -162,11 +162,13 @@ public class Square extends ClientMain {
      * Dispose and exit
      */
     private void onExit() {
-        // TODO: writeMFileOnServer NOT HERE! in case of exiting the client illegaly, the file won't update.
         ClientHandler.writeMFileOnServer();
         mainFrame.dispose();
     }
 
+    private void emergencyExit(){
+        System.exit(0);
+    }
     /**
      * A listener that updates the table on file deletion
      */
@@ -207,6 +209,10 @@ public class Square extends ClientMain {
                 String toSave = (String) file_table.getValueAt(file_table.getSelectedRow(), 0);
                 try {
                     byte[] fileBytes = ClientHandler.readFileToRAM(toSave);
+                    if(fileBytes == null){
+                        JOptionPane.showMessageDialog(null,ClientMain.FILE_DAMAGED_ERROR);
+                        emergencyExit();
+                    }
                     FileUtils.writeByteArrayToFile(new File(dir.getPath() + "\\" + toSave), fileBytes);
                 } catch (IOException e1) {
                     e1.printStackTrace();

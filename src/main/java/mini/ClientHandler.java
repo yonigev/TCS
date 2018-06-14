@@ -547,7 +547,7 @@ public class ClientHandler {
                     //append file size
                     stringBuilder.append(Long.toString(f.getSize())+",");
                     //append file modification date!
-                    //stringBuilder.append(Long.toString(f.getTimestamp().getTimeInMillis()));
+                    stringBuilder.append(Long.toString(f.getTimestamp().getTimeInMillis()));
                     //newline
                     stringBuilder.append('\n');
                 }
