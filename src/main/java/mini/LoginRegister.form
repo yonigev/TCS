@@ -132,6 +132,7 @@
               <editable value="false"/>
               <enabled value="false"/>
               <font size="20"/>
+              <foreground color="-1"/>
               <text value="Please Enter Username and Password"/>
             </properties>
           </component>

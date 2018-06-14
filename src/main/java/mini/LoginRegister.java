@@ -3,6 +3,7 @@ package mini;
 import org.apache.commons.net.ftp.FTPClient;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.*;
 
 public class LoginRegister extends JDialog {
@@ -29,6 +30,7 @@ public class LoginRegister extends JDialog {
         group=new ButtonGroup();
         group.add(loginSelection);
         group.add(registerSelection);
+        pleaseEnterUsernameAndTextArea.setDisabledTextColor(Color.WHITE);
 
         getRootPane().setDefaultButton(buttonOK);
 
