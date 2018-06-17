@@ -165,10 +165,14 @@ public class Square extends ClientMain {
      */
     private void deleteMarkedFile() {
         int selectedRow = file_table.getSelectedRow();
-
-        if (selectedRow != -1 && JOptionPane.showConfirmDialog(null, "Are you sure you want to delete?") == JOptionPane.YES_OPTION) {
-            String filename = (String) file_table.getValueAt(selectedRow, 0);
-            boolean success = ClientHandler.handleDelete(ClientHandler.parseCommand("delete " + AuxFunctions.quotify(filename)));
+        int[] selectedRows=file_table.getSelectedRows();
+        boolean success = false;
+        if (selectedRows != null && JOptionPane.showConfirmDialog(null, "Are you sure you want to delete?") == JOptionPane.YES_OPTION) {
+            for(int row : selectedRows) {
+                String filename = (String) file_table.getValueAt(row, 0);
+                if(ClientHandler.handleDelete(ClientHandler.parseCommand("delete " + AuxFunctions.quotify(filename))))
+                    success=true;
+            }
             if (success) {
                 updateFileTable();
             }

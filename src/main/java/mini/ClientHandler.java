@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.codec.binary.Base32;
 
+import static mini.ClientMain.GUI_ENABLED;
 import static mini.ClientMain.client;
 
 public class ClientHandler {
@@ -333,7 +334,8 @@ public class ClientHandler {
                     decNames.add(decName);
                     if (decName == null)
                         return null;
-                    System.out.println(decName);
+                    if(!GUI_ENABLED)
+                        System.out.println(decName);
                 }
             }
             return decNames;
@@ -454,7 +456,8 @@ public class ClientHandler {
                     SimpleDateFormat format = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                     format.setTimeZone(TimeZone.getDefault());
                     String metaData="Name: " + filename + "\n" + "Size: " + size + "\n" + "Last Modified: " + format.format(dateModified.getTime());
-                    System.out.println(metaData);
+                    if(!GUI_ENABLED)
+                        System.out.println(metaData);
                     return metaToReturn;
                 }
             }
@@ -488,7 +491,6 @@ public class ClientHandler {
     protected static void writeMFileOnServer() {
         try {
             handleDelete(parseCommand("delete "+MFILE_NAME));
-            System.out.println("Writing a new MFile on server!");
             byte[] currentMetaData = getCurrentMetaData();
             byte[] encAuthFileName = encryptAndTagName(MFILE_NAME);
             InputStream in = new ByteArrayInputStream(currentMetaData);
@@ -532,19 +534,16 @@ public class ClientHandler {
      */
     private static byte[] getCurrentMetaData() {
         try {
-            System.out.println("Entered getCurrentMetaData");
             //list all files
             FTPFile[] files = client.listFiles();
             if(files != null){
-                System.out.println("Num of files on server: "+Integer.toString(files.length));
                 StringBuilder stringBuilder=new StringBuilder();
                 for(FTPFile f: files){
                     if(f.getName().equals(MFILE_NAME))
                         continue;
-                    if(f.getName().equals(base32.encodeAsString(encryptAndTagName(MFILE_NAME)))) {  //ignore the management file
-                        System.out.println("Skipping Management file in getCurrentMetaData");
+                    if(f.getName().equals(base32.encodeAsString(encryptAndTagName(MFILE_NAME))))   //ignore the management file
                         continue;
-                    }
+
                     //append file name
                     stringBuilder.append(f.getName()+",");
                     //append file size
