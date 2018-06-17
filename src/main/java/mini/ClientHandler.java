@@ -36,8 +36,8 @@ public class ClientHandler {
     private static  Base32 base32 = new Base32();
 
     /**
-     * Split an input of  ' write "path 1" "path 2" ...
-     * or split spaces
+     * Split an input with regex " \" " in case file names are involved
+     * or split spaces if not
      * @param command
      * @return
      */
@@ -45,15 +45,11 @@ public class ClientHandler {
         String[] splitCommand = command.split(" ");
         if(handlesAFile(splitCommand[0])){
             String[] paths = command.split("\"");
-
-            return AuxFunctions.removeSpaces(paths);
+            return AuxFunctions.removeSpaces(paths);    //remove spaces - side effects of splitting with "
         }
-        else {
-            //System.out.println("returning -  "+Arrays.toString(command.split(" ")));
+        else
             return command.split(" ");
-        }
     }
-
 
     /**
      * Checks if an opcode represents a Command that handles file names (and should be aware of spaces
@@ -139,6 +135,12 @@ public class ClientHandler {
         return nameChanged;
     }
 
+    /**
+     * Handle a DELETE command
+     *
+     * @param command
+     * @return true if the file was deleted from server properly
+     */
     protected static boolean handleDelete(String[] command) {
 
         for (String name : command) {
@@ -162,6 +164,10 @@ public class ClientHandler {
         return false;
     }
 
+    /**
+     * Handles a READ command
+     * @param command
+     */
     private static void handleRead(String[] command) {
         for (int i = 1; i < command.length; i++) {
             String name = command[i];
@@ -476,18 +482,17 @@ public class ClientHandler {
      * to the metadata of all the files on the server
      */
 
-
+    /**
+     * Get the servers current MetaData and write a new Management file on it
+     */
     protected static void writeMFileOnServer() {
-
         try {
-            handleDelete(("delete "+MFILE_NAME).split(" "));
+            handleDelete(parseCommand("delete "+MFILE_NAME));
             System.out.println("Writing a new MFile on server!");
             byte[] currentMetaData = getCurrentMetaData();
-            //System.out.println("meta data byte array length:  "+currentMetaData.length);
             byte[] encAuthFileName = encryptAndTagName(MFILE_NAME);
             InputStream in = new ByteArrayInputStream(currentMetaData);
             InputStream readyForWriting = encryptAndTagFile(in);
-            //System.out.println("the bytes we store in server as string :" + base32.encodeAsString(IOUtils.toByteArray(readyForWriting)));
             if(!ClientMain.client.storeFile(base32.encodeAsString(encAuthFileName), readyForWriting)){
                 System.out.println("Error storing new MFile!");
             }
@@ -507,7 +512,6 @@ public class ClientHandler {
 
         try {
             byte[] currentMetaData = getCurrentMetaData();
-            System.out.println("Trying to Authenticate MFile");
             //READ the file byte data to Client RAM (authenticated and decrypted)
             byte[] managementData = readFileToRAM(MFILE_NAME);
             if (managementData == null) {
@@ -520,7 +524,6 @@ public class ClientHandler {
         }
         return false;
 }
-
 
     /**
      * Get metadata of ALL files on server and return a byte array of this data.

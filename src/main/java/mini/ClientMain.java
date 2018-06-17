@@ -24,10 +24,7 @@ public class ClientMain {
     protected static final String CONNECTION_ERROR = "Error! cannot connect to server ";
     protected static final String FS_CHANGED_ERROR = "Attention: Some files have changed! ";
     protected static final String FILE_DAMAGED_ERROR = "File has been Damaged! ";
-
-
     protected static final int REGISTRATION_SUCCESS = 601;
-
     protected static final String PASSWORD_SUFFIX_ENCRYPTION = "1";           //suffix added to the password for hashing - after hash-would be used for file & file name encryption
     protected static final String PASSWORD_SUFFIX_AUTHENTICATION = "2";      //suffix added to the password for hashing - after hash-would be used for authentication
     protected static final String PASSWORD_SUFFIX_PASSWORD = "3";             //suffix added to the password for hashing - after hash- would be the user's password
@@ -41,7 +38,7 @@ public class ClientMain {
 
 
     public static void main(String[] args) {
-        connectToServer("127.0.0.1"); //TODO: change IP .
+        connectToServer("127.0.0.1");
         try {
             client.setFileType(FTPClient.BINARY_FILE_TYPE);
         } catch (IOException e) {

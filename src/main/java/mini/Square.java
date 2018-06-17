@@ -5,8 +5,11 @@ import net.iharder.dnd.FileDrop;
 import net.iharder.dnd.FileDropEvent;
 import net.iharder.dnd.FileDropListener;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import sun.swing.ImageIconUIResource;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.plaf.FileChooserUI;
@@ -16,6 +19,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 
 import static com.sun.deploy.uitoolkit.ToolkitStore.dispose;
@@ -42,31 +46,40 @@ public class Square extends ClientMain {
     private DeleteFileActionListener deleteFileActionListener;
     private SaveButtonListener saveButtonListener;
     private UploadButtonListener uploadButtonListener;
+    private static ImageIcon icon;
     public Square() {
-        setGui();
-        ClientMain.GUI_ENABLED = true;
+
+        setGuiLook();
+
+        URL imgURL=getClass().getResource("icon.png");
+        if(imgURL!=null)
+            icon=new ImageIcon(imgURL);
+        ClientMain.GUI_ENABLED = true;              //for when prompting the user (like overwrite)
+
         GUI_connectToServer("127.0.0.1"); //TODO: change IP .
-        deleteFileActionListener = new DeleteFileActionListener();
-        fileDropListener = new MyFileDropListener();
-        saveButtonListener = new SaveButtonListener();
-        uploadButtonListener=new UploadButtonListener();
-
-        fileDrop = new FileDrop(back, fileDropListener);
-        updateFileTable();
-
-        buttonExit.addActionListener(new ActionListener() {
+        deleteFileActionListener = new DeleteFileActionListener();       //set listeners
+        fileDropListener = new MyFileDropListener();                     //
+        saveButtonListener = new SaveButtonListener();                   //
+        uploadButtonListener=new UploadButtonListener();                 //
+        fileDrop = new FileDrop(back, fileDropListener);                 //
+        buttonExit.addActionListener(new ActionListener() {              //
             @Override
             public void actionPerformed(ActionEvent e) {
                 onExit();
             }
         });
-        buttonDelete.addActionListener(deleteFileActionListener);
-        saveAsButton.addActionListener(saveButtonListener);
-        uploadButton.addActionListener(uploadButtonListener);
+        buttonDelete.addActionListener(deleteFileActionListener);        //
+        saveAsButton.addActionListener(saveButtonListener);              //
+        uploadButton.addActionListener(uploadButtonListener);            //
+        updateFileTable();                                               //update the file table to match the server's contents
+
 
     }
 
-    private void setGui() {
+    /**
+     * Set the UI to look like a normal Windows form (if on windows)
+     */
+    private void setGuiLook() {
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -83,26 +96,28 @@ public class Square extends ClientMain {
     }
 
     public static void main(String[] args) {
-
         mainFrame = new JFrame("Square");      //create new JFrame
-
         mainFrame.setContentPane(new Square().back);    //set "back" as the content
+        if(icon!=null && icon.getImage()!=null)
+            mainFrame.setIconImage(icon.getImage());
         mainFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         mainFrame.pack();
         mainFrame.setSize(400, 400);
         mainFrame.setVisible(true);
-
     }
 
+    /**
+     * Connect to server using the UI instead of the CLI
+     * @param serverAddress
+     */
     protected void GUI_connectToServer(String serverAddress) {
         try {
-            client.connect(serverAddress, 44444);
-            client.setFileType(FTPClient.BINARY_FILE_TYPE);
+            client.connect(serverAddress, 44444);       //connect to server
+            client.setFileType(FTP.BINARY_FILE_TYPE); //set file type as Binary TODO:changed here from FTPClient.BINARY ...
         } catch (IOException e) {
             e.printStackTrace();
         }
         if (client.isConnected()) {
-
             LoginRegister loginRegister = new LoginRegister();
             loginRegister.setSize(500, 300);
             loginRegister.setResizable(false);
@@ -112,6 +127,9 @@ public class Square extends ClientMain {
         }
     }
 
+    /**
+     * Create the JScrollPane for the table
+     */
     private void createUIComponents() {
         //create the JScrollPane
         scrollPane = new JScrollPane(file_table);
@@ -166,9 +184,14 @@ public class Square extends ClientMain {
         mainFrame.dispose();
     }
 
+    /**
+     * "Hard" exit when files on server are illegally changed
+     */
     private void emergencyExit(){
         System.exit(0);
     }
+
+
     /**
      * A listener that updates the table on file deletion
      */
@@ -179,8 +202,9 @@ public class Square extends ClientMain {
             deleteMarkedFile();
         }
     }
-
-
+    /**
+     * On File Drop listener
+     */
     private class MyFileDropListener implements FileDrop.Listener {
 
         @Override
@@ -193,8 +217,9 @@ public class Square extends ClientMain {
             }
         }
     }
-
-
+    /**
+     * Listener called when "Save As" button is clicked
+     */
     private class SaveButtonListener implements ActionListener {
 
         @Override
@@ -222,6 +247,9 @@ public class Square extends ClientMain {
         }
     }
 
+    /**
+     * Listener calld when "Upload"  button is clicked
+     */
     private class UploadButtonListener implements ActionListener {
 
          @Override
