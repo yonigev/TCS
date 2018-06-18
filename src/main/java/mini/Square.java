@@ -15,6 +15,7 @@ import javax.swing.event.*;
 import javax.swing.plaf.FileChooserUI;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -47,15 +48,18 @@ public class Square extends ClientMain {
     private SaveButtonListener saveButtonListener;
     private UploadButtonListener uploadButtonListener;
     private static ImageIcon icon;
+    private static TrayIcon trayIcon;
+    final static SystemTray tray = SystemTray.getSystemTray();
+
     public Square() {
 
         setGuiLook();
-
         URL imgURL=getClass().getResource("icon.png");
         if(imgURL!=null)
             icon=new ImageIcon(imgURL);
-        ClientMain.GUI_ENABLED = true;              //for when prompting the user (like overwrite)
 
+        ClientMain.GUI_ENABLED = true;               //for when prompting the user (like overwrite)
+        setSystemTray();
         GUI_connectToServer("127.0.0.1"); //TODO: change IP .
         deleteFileActionListener = new DeleteFileActionListener();       //set listeners
         fileDropListener = new MyFileDropListener();                     //
@@ -76,6 +80,70 @@ public class Square extends ClientMain {
 
     }
 
+    private void doSwitchUser(){
+        onExit();
+        try {
+            if(!client.logout()){
+                System.out.println("Could not log out");
+                return;
+            }
+            client.disconnect();
+            setFrameParameters();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Set the parameters for the JFrame
+     * and set to Visible.
+     */
+    private static void setFrameParameters(){
+        mainFrame.setContentPane(new Square().back);    //set "back" as the content
+        if(icon!=null && icon.getImage()!=null)
+            mainFrame.setIconImage(icon.getImage());
+        mainFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        mainFrame.pack();
+        mainFrame.setSize(400, 400);
+        mainFrame.setVisible(true);
+    }
+
+    /**
+     * Set the System tray icon and Menu
+     */
+    private void setSystemTray(){
+        //if the icon was found, and no errors made
+        if(icon!=null && icon.getImage()!=null) {
+            trayIcon = new TrayIcon(icon.getImage());
+            PopupMenu popupMenu = new PopupMenu();
+            MenuItem exit = new MenuItem("Exit");
+            MenuItem switchUser = new MenuItem("Switch User");
+            exit.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    onExit();
+                }
+            });
+            switchUser.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    doSwitchUser();
+                }
+            });
+            popupMenu.add(switchUser);
+            popupMenu.add(exit);
+            trayIcon.setPopupMenu(popupMenu);
+
+            try {
+
+                trayIcon.setImageAutoSize(true);
+                tray.add(trayIcon);
+
+            } catch (AWTException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     /**
      * Set the UI to look like a normal Windows form (if on windows)
      */
@@ -95,22 +163,17 @@ public class Square extends ClientMain {
 
     }
 
+
     public static void main(String[] args) {
         mainFrame = new JFrame("Square");      //create new JFrame
-        mainFrame.setContentPane(new Square().back);    //set "back" as the content
-        if(icon!=null && icon.getImage()!=null)
-            mainFrame.setIconImage(icon.getImage());
-        mainFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        mainFrame.pack();
-        mainFrame.setSize(400, 400);
-        mainFrame.setVisible(true);
+       setFrameParameters();
     }
 
     /**
      * Connect to server using the UI instead of the CLI
      * @param serverAddress
      */
-    protected void GUI_connectToServer(String serverAddress) {
+    protected boolean GUI_connectToServer(String serverAddress) {
         try {
             client.connect(serverAddress, 44444);       //connect to server
             client.setFileType(FTP.BINARY_FILE_TYPE); //set file type as Binary TODO:changed here from FTPClient.BINARY ...
@@ -124,7 +187,9 @@ public class Square extends ClientMain {
             loginRegister.setVisible(true);
             if (!loginRegister.isSuccessful())
                 System.exit(0);
+
         }
+        return true;
     }
 
     /**
@@ -185,6 +250,7 @@ public class Square extends ClientMain {
      */
     private void onExit() {
         ClientHandler.writeMFileOnServer();
+        tray.remove(trayIcon);
         mainFrame.dispose();
     }
 
@@ -213,7 +279,9 @@ public class Square extends ClientMain {
 
         @Override
         public void filesDropped(File[] files) {
+
             for (File f : files) {
+
                 if (client.isConnected()) {
                     ClientHandler.handleWrite(ClientHandler.parseCommand(WRITE_OPCODE + AuxFunctions.quotify(f.getPath())));
                     updateFileTable();
