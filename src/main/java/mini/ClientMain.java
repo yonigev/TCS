@@ -4,16 +4,17 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
-import java.security.Key;
-import java.security.MessageDigest;
 
 import java.io.*;
+
 import java.util.Scanner;
 import java.util.logging.Logger;
-import javax.crypto.*;
-import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 
+/**
+ * The Client's main Class
+ * handles connection, login and register to the server
+ */
 public class ClientMain {
     protected static String REGISTER_COMMAND = "USER !REGISTER!";
     protected static final String ILLEGAL_INPUT = "Illegal Input!";
@@ -35,8 +36,6 @@ public class ClientMain {
     protected static final Logger logger = Logger.getLogger("client_logger");
     protected static boolean justRegistered = false;            //indicates if its the first time LOGIN
     protected static boolean GUI_ENABLED = false;
-
-
     public static void main(String[] args) {
         connectToServer("127.0.0.1");
         try {
@@ -85,6 +84,7 @@ public class ClientMain {
      * @param client
      */
     protected static boolean registerNewAccount(FTPClient client) {
+
         System.out.println(REGISTER_PROMPT);            //print a message to the user
         Scanner sc = new Scanner(System.in);
         String username;
@@ -93,6 +93,10 @@ public class ClientMain {
         username = sc.next();
         System.out.println(PASSWORD_PROMPT + "to register");
         password = sc.next();
+        while(password.length()<4){
+            System.out.println("Password too short. minimum length: 4");
+            password=sc.next();
+        }
         deriveKeys(password);
         String commandToSend = REGISTER_COMMAND + " " + username + " " + key3ForPassword;   //the command we will send to the server
         try {
@@ -117,6 +121,10 @@ public class ClientMain {
      */
     protected static boolean GUI_registerNewAccount(String username, String password,FTPClient client) {
 
+        if(password.length() <4){
+            JOptionPane.showMessageDialog(null,"Password too short. minimum length: 4");
+            return false;
+        }
         deriveKeys(password);
         String commandToSend = REGISTER_COMMAND + " " + username + " " + key3ForPassword;   //the command we will send to the server
         try {
@@ -135,6 +143,15 @@ public class ClientMain {
             return false;
         }
     }
+
+    /**
+     * Login to an Existing account using the GUI
+     * @param client
+     * @param username
+     * @param password
+     * @param firstLogin
+     * @return
+     */
     public static boolean GUI_loginExistingAccount(FTPClient client, String username, String password,boolean firstLogin) {
         deriveKeys(password);
         try {
@@ -147,6 +164,9 @@ public class ClientMain {
                 else if(!ClientHandler.authenticateMFileData()) {
                     System.out.println("Management File Damaged");
                     JOptionPane.showMessageDialog(null,FS_CHANGED_ERROR);
+                    Square.emergencyExit();
+
+
                 }
             }
             System.out.println(client.getReplyString());

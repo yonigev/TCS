@@ -6,6 +6,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
+/**
+ * Represents the Swing form for Login and Register
+ */
 public class LoginRegister extends JDialog {
     private static final String LOGIN_ERROR="Wrong username / password.";
     private static final String REGISTER_ERROR="Could not register";

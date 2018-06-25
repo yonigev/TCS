@@ -3,6 +3,10 @@ package mini;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * Extends DefaultTableModel
+ * For creating a custom Table model, matching the needed table structure
+ */
 public class FileTableModel extends DefaultTableModel {
 
     public FileTableModel(int rowCount, int columnCount) {

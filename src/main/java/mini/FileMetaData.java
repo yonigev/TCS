@@ -4,6 +4,10 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 
+/**
+ * Represents a file's Meta-data
+ * used to organize the GUI Table more simply.
+ */
 public class FileMetaData {
     String filename;
     Calendar fileDateLastChanged;
@@ -32,7 +36,7 @@ public class FileMetaData {
     /**
      * @return return an array containing <size, date-modified>
      */
-    public String[] toMinimalArray(){
+    public String[] toArray(){
         String size = Long.toString(filesize)+ " bytes";
         SimpleDateFormat format = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
         format.setTimeZone(TimeZone.getDefault());

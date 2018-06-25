@@ -27,10 +27,8 @@ import static com.sun.deploy.uitoolkit.ToolkitStore.dispose;
 
 
 /**
- * Connect and login to the FTP Server. (register to server if required.
- * @return the FTPClient
+ * The main class for GUI (Swing based) Client.
  */
-
 public class Square extends ClientMain {
     public static final String WRITE_OPCODE = "write ";
     private static final String[] TABLE_HEADER = {"Name ", "Size ", "Last Modified "};
@@ -50,6 +48,7 @@ public class Square extends ClientMain {
     private static ImageIcon icon;
     private static TrayIcon trayIcon;
     final static SystemTray tray = SystemTray.getSystemTray();
+    static boolean connected = false;
 
     public Square() {
 
@@ -60,7 +59,10 @@ public class Square extends ClientMain {
 
         ClientMain.GUI_ENABLED = true;               //for when prompting the user (like overwrite)
         setSystemTray();
-        GUI_connectToServer("127.0.0.1"); //TODO: change IP .
+        connected = GUI_connectToServer("127.0.0.1");
+        if(!connected){
+            JOptionPane.showMessageDialog(null,"Could not connect");
+        }
         deleteFileActionListener = new DeleteFileActionListener();       //set listeners
         fileDropListener = new MyFileDropListener();                     //
         saveButtonListener = new SaveButtonListener();                   //
@@ -78,8 +80,12 @@ public class Square extends ClientMain {
         updateFileTable();                                               //update the file table to match the server's contents
 
 
+
     }
 
+    /**
+     * Logout and prompt login with another user
+     */
     private void doSwitchUser(){
         onExit();
         try {
@@ -186,7 +192,7 @@ public class Square extends ClientMain {
             loginRegister.setResizable(false);
             loginRegister.setVisible(true);
             if (!loginRegister.isSuccessful())
-                System.exit(0);
+                onExit();
 
         }
         return true;
@@ -213,7 +219,7 @@ public class Square extends ClientMain {
         for (String filename : fileNames) {
             //get meta-data for the file
             FileMetaData meta = ClientHandler.handleMeta(ClientHandler.parseCommand("meta " + AuxFunctions.quotify(filename)));
-            tableData[row] = meta.toMinimalArray();
+            tableData[row] = meta.toArray();
             row++;
         }
         //set the table model
@@ -249,7 +255,7 @@ public class Square extends ClientMain {
      * Dispose and exit
      */
     private void onExit() {
-        ClientHandler.writeMFileOnServer();
+        //ClientHandler.writeMFileOnServer();
         tray.remove(trayIcon);
         mainFrame.dispose();
     }
@@ -257,8 +263,9 @@ public class Square extends ClientMain {
     /**
      * "Hard" exit when files on server are illegally changed
      */
-    private void emergencyExit(){
-        System.exit(0);
+    public static void emergencyExit(){
+        tray.remove(trayIcon);
+            System.exit(0);
     }
 
 

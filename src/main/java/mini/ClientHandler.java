@@ -1,25 +1,17 @@
 package mini;
 
-import com.sun.xml.internal.fastinfoset.util.StringArray;
-import javafx.util.Pair;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.time.DateFormatUtils;
-import org.apache.commons.net.ftp.FTPClient;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import java.io.*;
-import java.lang.reflect.Array;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.security.Key;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.net.ftp.FTPFile;
@@ -28,6 +20,10 @@ import org.apache.commons.codec.binary.Base32;
 import static mini.ClientMain.GUI_ENABLED;
 import static mini.ClientMain.client;
 
+/**
+ * Handles the client's connection to server - after login
+ * handles commands, encryption, decryption, authentication,  etc..
+ */
 public class ClientHandler {
     private static final String FILE_DELETION_SUCCESS = "File Successfully Deleted : ";
     private static final String FILE_DELETION_FAILURE = "File Could not be Deleted : ";
@@ -54,14 +50,15 @@ public class ClientHandler {
 
     /**
      * Checks if an opcode represents a Command that handles file names (and should be aware of spaces
-     * @param opcode
-     * @return
+     * @param opcode the command opcode to check
+     * @return True if the opcode represents a command that handles file names
      */
     private static boolean handlesAFile(String opcode){
         return (opcode.equals("write")|| opcode.equals("meta") || opcode.equals("delete")|| opcode.equals("rename"));
     }
     /**
      * Handles the connection to the server
+     * (For CLI Client)
      */
     public static void handleConnection() {
 
@@ -476,6 +473,7 @@ public class ClientHandler {
      * @return
      */
     static private boolean hashCompareByteArrays(byte[] arr1,byte[] arr2){
+        System.out.println("WELL");
         byte[] arr1_tag=getAuthenticationTag(arr1,ClientMain.key2ForAuthen);
         byte[] arr2_tag=getAuthenticationTag(arr2,ClientMain.key2ForAuthen);
         return Arrays.equals(arr1_tag,arr2_tag);
