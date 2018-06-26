@@ -33,7 +33,6 @@ public class ClientMain {
     protected static byte[] key2ForAuthen;
     protected static String key3ForPassword;
     protected static FTPClient  client = new FTPClient();
-    protected static final Logger logger = Logger.getLogger("client_logger");
     protected static boolean justRegistered = false;            //indicates if its the first time LOGIN
     protected static boolean GUI_ENABLED = false;
     public static void main(String[] args) {
@@ -46,9 +45,10 @@ public class ClientMain {
         ClientHandler.handleConnection();
 
     }
+
     /**
      * Connect and login to the FTP Server. (register to server if required.
-     * @return the FTPClient
+     * @param serverAddress the address of the server.
      */
     protected static void connectToServer(String serverAddress) {
         try {
@@ -78,10 +78,11 @@ public class ClientMain {
 
 
     }
+
     /**
      * Send the server a REGISTER USER command
-     *
-     * @param client
+     * @param client the FTPClient
+     * @return true if successful, false otherwise
      */
     protected static boolean registerNewAccount(FTPClient client) {
 
@@ -114,10 +115,13 @@ public class ClientMain {
             return false;
         }
     }
+
     /**
      * Send the server a REGISTER USER command
-     *
-     * @param client
+     * @param username the given username
+     * @param password the given password
+     * @param client the FTPClient
+     * @return True if successful, false otherwise
      */
     protected static boolean GUI_registerNewAccount(String username, String password,FTPClient client) {
 
@@ -146,11 +150,11 @@ public class ClientMain {
 
     /**
      * Login to an Existing account using the GUI
-     * @param client
-     * @param username
-     * @param password
-     * @param firstLogin
-     * @return
+     * @param client The FTP Client
+     * @param username the username
+     * @param password the password
+     * @param firstLogin true if it's the first login for the user
+     * @return true if logged in successfully, false otherwise
      */
     public static boolean GUI_loginExistingAccount(FTPClient client, String username, String password,boolean firstLogin) {
         deriveKeys(password);
@@ -181,9 +185,9 @@ public class ClientMain {
     /**
      * Login to an Existing account. prompt the user for a Username and Password
      *
-     * @param client
-     * @param scanner
-     * @return
+     * @param client the FTPClient
+     * @param scanner a Scanner
+     * @return True if logged in.
      */
     protected static boolean loginExistingAccount(FTPClient client, Scanner scanner) {
         String username;
@@ -221,7 +225,7 @@ public class ClientMain {
     }
     /**
      * Setting up all 3 keys
-     * @param password
+     * @param password the password, keys would be derived from it.
      */
     protected static void deriveKeys(String password) {
         key1ForEncryption = DigestUtils.sha256(password + PASSWORD_SUFFIX_ENCRYPTION);

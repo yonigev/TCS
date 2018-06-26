@@ -34,7 +34,7 @@ public class FileMetaData {
 
 
     /**
-     * @return return an array containing <size, date-modified>
+     * @return return an array containing the pair:  size, date-modified
      */
     public String[] toArray(){
         String size = Long.toString(filesize)+ " bytes";

@@ -17,6 +17,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.codec.binary.Base32;
 
+import static mini.AuxFunctions.getNameFromPath;
+import static mini.AuxFunctions.parseCommand;
 import static mini.ClientMain.GUI_ENABLED;
 import static mini.ClientMain.client;
 
@@ -32,30 +34,7 @@ public class ClientHandler {
     private static final String MFILE_NAME = "nothing_important_here";
     private static  Base32 base32 = new Base32();
 
-    /**
-     * Split an input with regex " \" " in case file names are involved
-     * or split spaces if not
-     * @param command
-     * @return
-     */
-    public static String[] parseCommand(String command){
-        String[] splitCommand = command.split(" ");
-        if(handlesAFile(splitCommand[0])){
-            String[] paths = command.split("\"");
-            return AuxFunctions.removeSpaces(paths);    //remove spaces - side effects of splitting with "
-        }
-        else
-            return command.split(" ");
-    }
 
-    /**
-     * Checks if an opcode represents a Command that handles file names (and should be aware of spaces
-     * @param opcode the command opcode to check
-     * @return True if the opcode represents a command that handles file names
-     */
-    private static boolean handlesAFile(String opcode){
-        return (opcode.equals("write")|| opcode.equals("meta") || opcode.equals("delete")|| opcode.equals("rename"));
-    }
     /**
      * Handles the connection to the server
      * (For CLI Client)
@@ -102,8 +81,6 @@ public class ClientHandler {
                     default:
                         System.out.println("Unknown command");
                 }
-            } else {
-                //TODO: COMMAND INPUT ERROR
             }
 
 
@@ -112,8 +89,8 @@ public class ClientHandler {
 
     /**
      * Handles the "rename" command
-     *
-     * @param command
+     * @param command the Rename command
+     * @return true if successful, false otherwise
      */
     protected static boolean handleRename(String[] command) {
         boolean nameChanged = false;
@@ -136,7 +113,7 @@ public class ClientHandler {
     /**
      * Handle a DELETE command
      *
-     * @param command
+     * @param command the Delete command
      * @return true if the file was deleted from server properly
      */
     protected static boolean handleDelete(String[] command) {
@@ -164,7 +141,7 @@ public class ClientHandler {
 
     /**
      * Handles a READ command
-     * @param command
+     * @param command the Read Command
      */
     private static void handleRead(String[] command) {
         for (int i = 1; i < command.length; i++) {
@@ -174,7 +151,7 @@ public class ClientHandler {
             try {
                 byte[] originFile;
                 if ((originFile = readFileToRAM(name)) == null)
-                    return ; //TODO: Some kind of error
+                    return ;
                 FileUtils.writeByteArrayToFile(file, originFile); // writing byte array to file
                 System.out.println(client.getReplyString());
                 return;
@@ -183,16 +160,15 @@ public class ClientHandler {
                 e.printStackTrace();
             }
         }
-        return;
     }
 
 
     /**
      * Encrypt a file and add a tag (suffix) for authentication
      *
-     * @param fis
+     * @param fis file Input Stream
      * @return a InputStream ready to be sent to server
-     * @throws IOException
+     * @throws IOException .
      */
     private static InputStream encryptAndTagFile(InputStream fis) throws IOException {
         byte[] originBytesToWrite = IOUtils.toByteArray(fis);
@@ -209,11 +185,10 @@ public class ClientHandler {
     /**
      * Encrypt a file name
      *
-     * @param originFileName
-     * @return
-     * @throws IOException
+     * @param originFileName the original file name, before encryption
+     * @return the encrypted and tagged name
      */
-    private static byte[] encryptAndTagName(String originFileName) throws IOException {
+    private static byte[] encryptAndTagName(String originFileName)  {
         byte[] originBytes = originFileName.getBytes();
         byte[] encryptedNameBytes = encryptData(originBytes, ClientMain.key1ForEncryption);
         byte[] tag = getAuthenticationTag(encryptedNameBytes, ClientMain.key2ForAuthen);
@@ -225,9 +200,9 @@ public class ClientHandler {
 
     /**
      * Decrypt and Authenticate a file name
-     *
-     * @param encName
-     * @return
+     * @param encName encrypted name
+     * @return  the decrypted name, after authentication
+     *          or null on error
      */
     private static String decryptAndAuthName(String encName) {
         byte[] encAuthNameBytes =base32.decode(encName);
@@ -246,7 +221,7 @@ public class ClientHandler {
     /**
      * Handles a write command
      *
-     * @param command
+     * @param command the Write command
      */
     protected static void handleWrite(String[] command) {
         for (String filePath : command) {
@@ -284,8 +259,8 @@ public class ClientHandler {
     /**
      * Prompts the user for overwriting a file
      *
-     * @param name
-     * @return
+     * @param name - name of file to overWrote
+     * @return true if successful, false otherwise
      */
     private static boolean promptOverWrite(String name) {
         if(ClientMain.GUI_ENABLED){
@@ -301,21 +276,8 @@ public class ClientHandler {
     }
 
     /**
-     * Get file name from the Path
-     *
-     * @param path
-     * @return
-     */
-    private static String getNameFromPath(String path) {
-        if (path.contains("\\")) {
-            String[] path_names = path.split("\\\\");
-            return path_names[path_names.length - 1];
-        } else
-            return path;
-    }
-
-    /**
      * Handles an "ls" command
+     * @return an arraylist of file names
      */
     protected static ArrayList<String> handleListCommand() {
         try {
@@ -347,9 +309,9 @@ public class ClientHandler {
      * encrypt data with encryptionKey using cipher with AES algorithm.
      * returning the encrypted data as string or null if fails.
      *
-     * @param data
-     * @param encryptionKey
-     * @return
+     * @param data to encrypt
+     * @param encryptionKey the key
+     * @return the encrypted data
      */
     private static byte[] encryptData(byte[] data, byte[] encryptionKey) {
         try {
@@ -367,9 +329,9 @@ public class ClientHandler {
      * Decrypt encrypted data with encryptionKey using AES and Cipher.
      * returning original data.
      *
-     * @param encryptedData
-     * @param encryptionKey
-     * @return
+     * @param encryptedData the encrypted data
+     * @param encryptionKey the key
+     * @return the Decrypted data
      */
     private static byte[] decryptData(byte[] encryptedData, byte[] encryptionKey) {
         try {
@@ -387,9 +349,9 @@ public class ClientHandler {
      * creating tag of length 256bit using Mac with authenKey on data.
      * returning the tag as string or null if fails.
      *
-     * @param data
-     * @param authenKey
-     * @return
+     * @param data to tag
+     * @param authenKey the key
+     * @return the tag for the data
      */
     private static byte[] getAuthenticationTag(byte[] data, byte[] authenKey) {
         try {
@@ -407,9 +369,9 @@ public class ClientHandler {
      * split the data to message and tag and checks if : tag = MAC(message,key).
      * if yes return message, else return null.
      *
-     * @param data
-     * @param authenKey
-     * @return
+     * @param data the data
+     * @param authenKey the key
+     * @return message
      */
     private static byte[] authenticateData(byte[] data, byte[] authenKey) {
         try {
@@ -434,8 +396,8 @@ public class ClientHandler {
     /**
      * Handles the meta command
      *
-     * @param command
-     * @return
+     * @param command the Meta command
+     * @return the FileMetaData of the file
      */
     protected static FileMetaData handleMeta(String[] command) {
 
@@ -468,9 +430,9 @@ public class ClientHandler {
 
     /**
      * Compare Two byte arrays, using the Authentication key, and HASH
-     * @param arr1
-     * @param arr2
-     * @return
+     * @param arr1 array 1
+     * @param arr2 array 2
+     * @return true if equal, false otherwise
      */
     static private boolean hashCompareByteArrays(byte[] arr1,byte[] arr2){
         System.out.println("WELL");
@@ -478,10 +440,8 @@ public class ClientHandler {
         byte[] arr2_tag=getAuthenticationTag(arr2,ClientMain.key2ForAuthen);
         return Arrays.equals(arr1_tag,arr2_tag);
     }
-    /**
-     * Write the Management File on server - the file is built according
-     * to the metadata of all the files on the server
-     */
+
+
 
     /**
      * Get the servers current MetaData and write a new Management file on it
@@ -506,7 +466,7 @@ public class ClientHandler {
     /**
      * Make sure the Management file on server is up-to-date
      * according to the Server's contents
-     * @return
+     * @return true if all is OK
      */
     protected static boolean authenticateMFileData() {
 
@@ -527,8 +487,7 @@ public class ClientHandler {
 
     /**
      * Get metadata of ALL files on server and return a byte array of this data.
-     * TODO: check order of returned FTPFiles.
-     * @return
+     * @return The metadata of all file as a byte array
      */
     private static byte[] getCurrentMetaData() {
         try {
@@ -565,9 +524,9 @@ public class ClientHandler {
     /**
      * Fetch a file from server -
      * but first authenticate it with the Key
-     * @param fileName
+     * @param fileName the file to Read
      * @return  byte array of the file, or null when file was tampered with
-     * @throws IOException
+     * @throws IOException .
      */
     protected static byte[] readFileToRAM(String fileName) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();

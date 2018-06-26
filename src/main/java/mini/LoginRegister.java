@@ -102,6 +102,7 @@ public class LoginRegister extends JDialog {
 
     private void onCancel() {
         dispose();
+
     }
 
 

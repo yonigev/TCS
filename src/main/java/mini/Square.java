@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 
-import static com.sun.deploy.uitoolkit.ToolkitStore.dispose;
 
 
 /**
@@ -49,6 +48,7 @@ public class Square extends ClientMain {
     private static TrayIcon trayIcon;
     final static SystemTray tray = SystemTray.getSystemTray();
     static boolean connected = false;
+    private static final String SERVER_IP="127.0.0.1";
 
     public Square() {
 
@@ -59,7 +59,7 @@ public class Square extends ClientMain {
 
         ClientMain.GUI_ENABLED = true;               //for when prompting the user (like overwrite)
         setSystemTray();
-        connected = GUI_connectToServer("127.0.0.1");
+        connected = GUI_connectToServer(SERVER_IP);
         if(!connected){
             JOptionPane.showMessageDialog(null,"Could not connect");
         }
@@ -108,6 +108,7 @@ public class Square extends ClientMain {
         mainFrame.setContentPane(new Square().back);    //set "back" as the content
         if(icon!=null && icon.getImage()!=null)
             mainFrame.setIconImage(icon.getImage());
+        mainFrame.setTitle("Encrypted Client");
         mainFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         mainFrame.pack();
         mainFrame.setSize(400, 400);
@@ -177,7 +178,8 @@ public class Square extends ClientMain {
 
     /**
      * Connect to server using the UI instead of the CLI
-     * @param serverAddress
+     * @param serverAddress the server's IP Address
+     * @return  true if connected successfully, false otherwise
      */
     protected boolean GUI_connectToServer(String serverAddress) {
         try {
@@ -218,7 +220,7 @@ public class Square extends ClientMain {
         int row = 0;
         for (String filename : fileNames) {
             //get meta-data for the file
-            FileMetaData meta = ClientHandler.handleMeta(ClientHandler.parseCommand("meta " + AuxFunctions.quotify(filename)));
+            FileMetaData meta = ClientHandler.handleMeta(AuxFunctions.parseCommand("meta " + AuxFunctions.quotify(filename)));
             tableData[row] = meta.toArray();
             row++;
         }
@@ -241,7 +243,7 @@ public class Square extends ClientMain {
         if (selectedRows != null && JOptionPane.showConfirmDialog(null, "Are you sure you want to delete?") == JOptionPane.YES_OPTION) {
             for(int row : selectedRows) {
                 String filename = (String) file_table.getValueAt(row, 0);
-                if(ClientHandler.handleDelete(ClientHandler.parseCommand("delete " + AuxFunctions.quotify(filename))))
+                if(ClientHandler.handleDelete(AuxFunctions.parseCommand("delete " + AuxFunctions.quotify(filename))))
                     success=true;
             }
             if (success) {
@@ -258,6 +260,7 @@ public class Square extends ClientMain {
         //ClientHandler.writeMFileOnServer();
         tray.remove(trayIcon);
         mainFrame.dispose();
+        Square.emergencyExit();
     }
 
     /**
@@ -290,7 +293,7 @@ public class Square extends ClientMain {
             for (File f : files) {
 
                 if (client.isConnected()) {
-                    ClientHandler.handleWrite(ClientHandler.parseCommand(WRITE_OPCODE + AuxFunctions.quotify(f.getPath())));
+                    ClientHandler.handleWrite(AuxFunctions.parseCommand(WRITE_OPCODE + AuxFunctions.quotify(f.getPath())));
                     updateFileTable();
                 }
             }
@@ -339,7 +342,7 @@ public class Square extends ClientMain {
             File file = fileChooser.getSelectedFile();   //get the chosen file\directory
             if(file!=null){
                 String path=file.getPath();
-                ClientHandler.handleWrite(ClientHandler.parseCommand("write "+AuxFunctions.quotify(path)));
+                ClientHandler.handleWrite(AuxFunctions.parseCommand("write "+AuxFunctions.quotify(path)));
                 updateFileTable();
             }
 

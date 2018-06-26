@@ -25,7 +25,7 @@ public class FileTableModel extends DefaultTableModel {
         Object oldValue=getValueAt(row,column); //keep old value
 
         //change table value ONLY if possible to change name at server
-        if(ClientHandler.handleRename(ClientHandler.parseCommand("rename " + AuxFunctions.quotify((String) oldValue)+ " "+AuxFunctions.quotify((String) aValue))))
+        if(ClientHandler.handleRename(AuxFunctions.parseCommand("rename " + AuxFunctions.quotify((String) oldValue)+ " "+AuxFunctions.quotify((String) aValue))))
             super.setValueAt(aValue, row, column);
 
     }
